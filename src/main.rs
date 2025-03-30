@@ -46,6 +46,12 @@ fn main() -> io::Result<()> {
                 .value_name("BYTES")
                 .help("Exclude files larger than this size in bytes"),
         )
+        .arg(
+            Arg::new("test")
+                .short('t')
+                .long("test")
+                .help("Enable test mode to display debugging information"),
+        )
         .get_matches();
 
     // Get the values from the command line arguments
@@ -61,6 +67,22 @@ fn main() -> io::Result<()> {
     let max_size: Option<u64> = matches
         .get_one::<String>("max_size")
         .and_then(|s| s.parse().ok());
+    let test_mode = matches.contains_id("test");
+
+    if test_mode {
+        println!("DEBUG MODE ENABLED:");
+        println!(" - Input Directory: {}", dir_path);
+        println!(" - Output File: {}", output_file);
+        println!(" - Min File Size: {} bytes", min_size);
+        println!(
+            " - Max File Size: {} bytes",
+            max_size.map_or("None".to_string(), |v| v.to_string())
+        );
+        println!(
+            " - Included Extensions: {:?}",
+            excluded_extensions.as_ref().map(|e| e.join(", "))
+        );
+    }
 
     // Build gitignore patterns
     let mut gitignore_builder = GitignoreBuilder::new(dir_path);
@@ -112,10 +134,24 @@ fn main() -> io::Result<()> {
 
             // Check file size against min and max size
             if file_size < min_size {
+                if test_mode {
+                    println!(
+                        "Skipping (too small): {} ({} bytes)",
+                        path.display(),
+                        file_size
+                    );
+                }
                 continue;
             }
             if let Some(max) = max_size {
                 if file_size > max {
+                    if test_mode {
+                        println!(
+                            "Skipping (too large): {} ({} bytes)",
+                            path.display(),
+                            file_size
+                        );
+                    }
                     continue;
                 }
             }
@@ -129,8 +165,16 @@ fn main() -> io::Result<()> {
             // Check if the file extension is in the excluded list
             if let Some(ref excluded_exts) = excluded_extensions {
                 if ext.is_some_and(|e| excluded_exts.contains(&e)) {
+                    if test_mode {
+                        println!("Skipping (excluded extension): {}", path.display());
+                    }
                     continue; // Skip files with excluded extensions
                 }
+            }
+
+            // If test mode is enabled, print the file being processed
+            if test_mode {
+                println!("Processing: {} ({} bytes)", path.display(), file_size);
             }
 
             // Write the file name and size to the output file
