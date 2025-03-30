@@ -51,9 +51,9 @@ fn main() -> io::Result<()> {
     // Get the values from the command line arguments
     let dir_path: &String = matches.get_one("directory").unwrap();
     let output_file: &String = matches.get_one("output").unwrap();
-    let extensions: Option<Vec<String>> = matches
+    let excluded_extensions: Option<Vec<String>> = matches
         .get_one::<String>("extensions")
-        .map(|ext| ext.split(',').map(|s| s.trim().to_string()).collect());
+        .map(|ext| ext.split(',').map(|s| s.trim().to_lowercase()).collect());
     let min_size: u64 = matches
         .get_one::<String>("min_size")
         .and_then(|s| s.parse().ok())
@@ -69,9 +69,16 @@ fn main() -> io::Result<()> {
         .map_err(|e| Error::new(ErrorKind::Other, e))?; // Default ignore for node_modules
 
     // Add common lock files to the ignore list
-    let lock_files = ["bun.lock", "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "Cargo.lock"];
+    let lock_files = [
+        "bun.lock",
+        "package-lock.json",
+        "yarn.lock",
+        "pnpm-lock.yaml",
+        "Cargo.lock",
+    ];
     for lock_file in &lock_files {
-        gitignore_builder.add_line(None, lock_file)
+        gitignore_builder
+            .add_line(None, lock_file)
             .map_err(|e| Error::new(ErrorKind::Other, e))?;
     }
 
@@ -119,10 +126,10 @@ fn main() -> io::Result<()> {
                 .and_then(|e| e.to_str())
                 .map(|e| e.to_lowercase());
 
-            // If extensions are specified, check if the file's extension is allowed
-            if let Some(ref allowed_exts) = extensions {
-                if !ext.is_some_and(|e| allowed_exts.contains(&e)) {
-                    continue;
+            // Check if the file extension is in the excluded list
+            if let Some(ref excluded_exts) = excluded_extensions {
+                if ext.is_some_and(|e| excluded_exts.contains(&e)) {
+                    continue; // Skip files with excluded extensions
                 }
             }
 
