@@ -127,7 +127,19 @@ fn main() -> io::Result<()> {
         let path = entry.path();
 
         // Skip if path matches gitignore patterns
-        if gitignore.matched(&path, path.is_dir()).is_ignore() {
+        let is_dir = path.is_dir();
+        if gitignore.matched(path, is_dir).is_ignore() {
+            if test_mode {
+                println!("Skipping (gitignore): {}", path.display());
+            }
+            continue;
+        }
+
+        // Skip if the path is a directory and test mode is enabled
+        if is_dir {
+            if test_mode {
+                println!("Skipping directory: {}", path.display());
+            }
             continue;
         }
 
