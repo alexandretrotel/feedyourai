@@ -1,0 +1,10 @@
+[package]
+name = "feedyourai"
+version = "1.0.0"
+edition = "2024"
+description = "A tool to combine text files for AI processing with filtering options."
+authors = ["Alexandre Trotel <trotelalexandre@proton.me>"]
+license = "MIT"
+
+[dependencies]
+clap = "4.5.34"
