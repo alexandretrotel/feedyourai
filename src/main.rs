@@ -3,6 +3,7 @@ use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use std::fs::{self, File};
 use std::io::{self, Error, ErrorKind, Read, Write};
 use std::path::Path;
+use walkdir::WalkDir;
 
 fn main() -> io::Result<()> {
     // Set up command line argument parsing
@@ -37,14 +38,16 @@ fn main() -> io::Result<()> {
                 .short('n')
                 .long("min-size")
                 .value_name("BYTES")
-                .help("Exclude files smaller than this size in bytes (default: 51200)"),
+                .help("Exclude files smaller than this size in bytes")
+                .default_value("0"), // 0 bytes default
         )
         .arg(
             Arg::new("max_size")
                 .short('m')
                 .long("max-size")
                 .value_name("BYTES")
-                .help("Exclude files larger than this size in bytes"),
+                .help("Exclude files larger than this size in bytes")
+                .default_value("1048576"), // 1MB default
         )
         .arg(
             Arg::new("test")
@@ -60,10 +63,9 @@ fn main() -> io::Result<()> {
     let excluded_extensions: Option<Vec<String>> = matches
         .get_one::<String>("extensions")
         .map(|ext| ext.split(',').map(|s| s.trim().to_lowercase()).collect());
-    let min_size: u64 = matches
+    let min_size: Option<u64> = matches
         .get_one::<String>("min_size")
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(51_200); // 50KB default
+        .and_then(|s| s.parse().ok());
     let max_size: Option<u64> = matches
         .get_one::<String>("max_size")
         .and_then(|s| s.parse().ok());
@@ -73,7 +75,10 @@ fn main() -> io::Result<()> {
         println!("DEBUG MODE ENABLED:");
         println!(" - Input Directory: {}", dir_path);
         println!(" - Output File: {}", output_file);
-        println!(" - Min File Size: {} bytes", min_size);
+        println!(
+            " - Min File Size: {} bytes",
+            min_size.map_or("None".to_string(), |v| v.to_string())
+        );
         println!(
             " - Max File Size: {} bytes",
             max_size.map_or("None".to_string(), |v| v.to_string())
@@ -115,11 +120,9 @@ fn main() -> io::Result<()> {
 
     // Ensure the output file is writable
     let mut output = File::create(output_file)?;
-    let entries = fs::read_dir(dir_path)?;
 
     // Iterate over the directory entries
-    for entry in entries {
-        let entry = entry?;
+    for entry in WalkDir::new(dir_path).into_iter().filter_map(Result::ok) {
         let path = entry.path();
 
         // Skip if path matches gitignore patterns
@@ -133,15 +136,17 @@ fn main() -> io::Result<()> {
             let file_size = metadata.len();
 
             // Check file size against min and max size
-            if file_size < min_size {
-                if test_mode {
-                    println!(
-                        "Skipping (too small): {} ({} bytes)",
-                        path.display(),
-                        file_size
-                    );
+            if let Some(min) = min_size {
+                if file_size < min {
+                    if test_mode {
+                        println!(
+                            "Skipping (too small): {} ({} bytes)",
+                            path.display(),
+                            file_size
+                        );
+                    }
+                    continue;
                 }
-                continue;
             }
             if let Some(max) = max_size {
                 if file_size > max {
