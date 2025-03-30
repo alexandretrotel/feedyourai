@@ -114,7 +114,7 @@ fn main() -> io::Result<()> {
         .build()
         .unwrap_or_else(|_| Gitignore::empty());
 
-    let ignored_dirs = ["node_modules", ".git", ".svn", ".hg", ".idea", ".vscode"];
+    let ignored_dirs = ["node_modules", ".git", ".svn", ".hg", ".idea", ".vscode", "build", "dist"];
     let mut output = File::create(output_file)?;
 
     println!("Processing files in: {}", dir_path);
