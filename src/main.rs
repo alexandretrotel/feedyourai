@@ -95,17 +95,18 @@ fn main() -> io::Result<()> {
         .add_line(None, "node_modules")
         .map_err(|e| Error::new(ErrorKind::Other, e))?; // Default ignore for node_modules
 
-    // Add common lock files to the ignore list
-    let lock_files = [
+    // Add common lock files and system files to the ignore list
+    let ignored_files = [
         "bun.lock",
         "package-lock.json",
         "yarn.lock",
         "pnpm-lock.yaml",
         "Cargo.lock",
+        ".DS_Store",
     ];
-    for lock_file in &lock_files {
+    for ignored in &ignored_files {
         gitignore_builder
-            .add_line(None, lock_file)
+            .add_line(None, ignored)
             .map_err(|e| Error::new(ErrorKind::Other, e))?;
     }
 
@@ -182,21 +183,29 @@ fn main() -> io::Result<()> {
                 println!("Processing: {} ({} bytes)", path.display(), file_size);
             }
 
-            // Write the file name and size to the output file
-            let filename = path
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("unknown");
-
-            writeln!(
-                output,
-                "\n=== File: {} ({} bytes) ===\n",
-                filename, file_size
-            )?;
+            // Read the file as binary and check if it's UTF-8
             let mut file = File::open(&path)?;
-            let mut contents = String::new();
-            file.read_to_string(&mut contents)?;
-            write!(output, "{}", contents)?;
+            let mut contents = Vec::new();
+            file.read_to_end(&mut contents)?;
+
+            if let Ok(text) = String::from_utf8(contents) {
+                // Write the file name and size to the output file
+                let filename = path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("unknown");
+
+                writeln!(
+                    output,
+                    "\n=== File: {} ({} bytes) ===\n",
+                    filename, file_size
+                )?;
+                write!(output, "{}", text)?;
+            } else {
+                if test_mode {
+                    println!("Skipping (not UTF-8): {}", path.display());
+                }
+            }
         }
     }
 
