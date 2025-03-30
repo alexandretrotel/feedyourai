@@ -6,7 +6,6 @@ use std::path::Path;
 use walkdir::WalkDir;
 
 fn is_in_ignored_dir(path: &Path, ignored_dirs: &[&str]) -> bool {
-    // Check all components in the path for a match.
     path.components().any(|comp| {
         if let Some(name) = comp.as_os_str().to_str() {
             ignored_dirs.contains(&name)
@@ -17,7 +16,6 @@ fn is_in_ignored_dir(path: &Path, ignored_dirs: &[&str]) -> bool {
 }
 
 fn main() -> io::Result<()> {
-    // Set up command line argument parsing
     let matches = Command::new("FeedYourAI")
         .version("1.0.0")
         .about("A tool to combine text files for AI processing with filtering options.")
@@ -50,7 +48,7 @@ fn main() -> io::Result<()> {
                 .long("min-size")
                 .value_name("BYTES")
                 .help("Exclude files smaller than this size in bytes")
-                .default_value("0"), // 0 bytes default
+                .default_value("0"),
         )
         .arg(
             Arg::new("max_size")
@@ -58,7 +56,7 @@ fn main() -> io::Result<()> {
                 .long("max-size")
                 .value_name("BYTES")
                 .help("Exclude files larger than this size in bytes")
-                .default_value("1048576"), // 1MB default
+                .default_value("1048576"),
         )
         .arg(
             Arg::new("test")
@@ -68,7 +66,6 @@ fn main() -> io::Result<()> {
         )
         .get_matches();
 
-    // Get the values from the command line arguments
     let dir_path: &String = matches.get_one("directory").unwrap();
     let output_file: &String = matches.get_one("output").unwrap();
     let excluded_extensions: Option<Vec<String>> = matches
@@ -86,24 +83,15 @@ fn main() -> io::Result<()> {
         println!("DEBUG MODE ENABLED:");
         println!(" - Input Directory: {}", dir_path);
         println!(" - Output File: {}", output_file);
-        println!(
-            " - Min File Size: {} bytes",
-            min_size.map_or("None".to_string(), |v| v.to_string())
-        );
-        println!(
-            " - Max File Size: {} bytes",
-            max_size.map_or("None".to_string(), |v| v.to_string())
-        );
+        println!(" - Min File Size: {} bytes", min_size.unwrap_or(0));
+        println!(" - Max File Size: {} bytes", max_size.unwrap_or(1_048_576));
         println!(
             " - Included Extensions: {:?}",
             excluded_extensions.as_ref().map(|e| e.join(", "))
         );
     }
 
-    // Build gitignore patterns (for files and other rules)
     let mut gitignore_builder = GitignoreBuilder::new(dir_path);
-
-    // Add common lock files and system files to the ignore list
     let ignored_files = [
         "bun.lock",
         "package-lock.json",
@@ -118,7 +106,6 @@ fn main() -> io::Result<()> {
             .map_err(|e| Error::new(ErrorKind::Other, e))?;
     }
 
-    // Check for .gitignore in the specified directory and add its rules
     let gitignore_path = Path::new(dir_path).join(".gitignore");
     if gitignore_path.exists() {
         gitignore_builder.add(gitignore_path);
@@ -127,17 +114,14 @@ fn main() -> io::Result<()> {
         .build()
         .unwrap_or_else(|_| Gitignore::empty());
 
-    // Define directories to ignore separately
     let ignored_dirs = ["node_modules", ".git", ".svn", ".hg", ".idea", ".vscode"];
-
-    // Ensure the output file is writable
     let mut output = File::create(output_file)?;
 
-    // Iterate over the directory entries
+    println!("Processing files in: {}", dir_path);
+
     for entry in WalkDir::new(dir_path).into_iter().filter_map(Result::ok) {
         let path = entry.path();
 
-        // Skip if the file is in one of the ignored directories
         if is_in_ignored_dir(path, &ignored_dirs) {
             if test_mode {
                 println!("Skipping (ignored folder): {}", path.display());
@@ -145,7 +129,6 @@ fn main() -> io::Result<()> {
             continue;
         }
 
-        // Skip if path matches gitignore patterns
         let is_dir = path.is_dir();
         if gitignore.matched(path, is_dir).is_ignore() {
             if test_mode {
@@ -154,7 +137,6 @@ fn main() -> io::Result<()> {
             continue;
         }
 
-        // Skip if the path is a directory (for processing files only)
         if is_dir {
             if test_mode {
                 println!("Skipping directory: {}", path.display());
@@ -162,12 +144,10 @@ fn main() -> io::Result<()> {
             continue;
         }
 
-        // Check if the path is a file and apply size and extension filters
         if path.is_file() {
             let metadata = fs::metadata(&path)?;
             let file_size = metadata.len();
 
-            // Check file size against min and max size
             if let Some(min) = min_size {
                 if file_size < min {
                     if test_mode {
@@ -193,12 +173,10 @@ fn main() -> io::Result<()> {
                 }
             }
 
-            // Check file extension if specified
             let ext = path
                 .extension()
                 .and_then(|e| e.to_str())
                 .map(|e| e.to_lowercase());
-
             if let Some(ref excluded_exts) = excluded_extensions {
                 if ext.is_some_and(|e| excluded_exts.contains(&e)) {
                     if test_mode {
@@ -208,25 +186,18 @@ fn main() -> io::Result<()> {
                 }
             }
 
-            if test_mode {
-                println!("Processing: {} ({} bytes)", path.display(), file_size);
-            }
+            println!("Processing: {} ({} bytes)", path.display(), file_size);
 
-            // Read the file as binary and check if it's UTF-8
             let mut file = File::open(&path)?;
             let mut contents = Vec::new();
             file.read_to_end(&mut contents)?;
 
             if let Ok(text) = String::from_utf8(contents) {
-                let filename = path
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("unknown");
-
                 writeln!(
                     output,
                     "\n=== File: {} ({} bytes) ===\n",
-                    filename, file_size
+                    path.display(),
+                    file_size
                 )?;
                 write!(output, "{}", text)?;
             } else if test_mode {
