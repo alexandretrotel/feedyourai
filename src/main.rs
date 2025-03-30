@@ -5,6 +5,17 @@ use std::io::{self, Error, ErrorKind, Read, Write};
 use std::path::Path;
 use walkdir::WalkDir;
 
+fn is_in_ignored_dir(path: &Path, ignored_dirs: &[&str]) -> bool {
+    // Check all components in the path for a match.
+    path.components().any(|comp| {
+        if let Some(name) = comp.as_os_str().to_str() {
+            ignored_dirs.contains(&name)
+        } else {
+            false
+        }
+    })
+}
+
 fn main() -> io::Result<()> {
     // Set up command line argument parsing
     let matches = Command::new("FeedYourAI")
@@ -89,7 +100,7 @@ fn main() -> io::Result<()> {
         );
     }
 
-    // Build gitignore patterns
+    // Build gitignore patterns (for files and other rules)
     let mut gitignore_builder = GitignoreBuilder::new(dir_path);
 
     // Add common lock files and system files to the ignore list
@@ -116,13 +127,8 @@ fn main() -> io::Result<()> {
         .build()
         .unwrap_or_else(|_| Gitignore::empty());
 
-    // Add folders to ignore such as node_modules, .git, and .svn
+    // Define directories to ignore separately
     let ignored_dirs = ["node_modules", ".git", ".svn", ".hg", ".idea", ".vscode"];
-    for ignored in &ignored_dirs {
-        gitignore_builder
-            .add_line(None, &format!("**/{}", ignored))
-            .map_err(|e| Error::new(ErrorKind::Other, e))?;
-    }
 
     // Ensure the output file is writable
     let mut output = File::create(output_file)?;
@@ -130,6 +136,14 @@ fn main() -> io::Result<()> {
     // Iterate over the directory entries
     for entry in WalkDir::new(dir_path).into_iter().filter_map(Result::ok) {
         let path = entry.path();
+
+        // Skip if the file is in one of the ignored directories
+        if is_in_ignored_dir(path, &ignored_dirs) {
+            if test_mode {
+                println!("Skipping (ignored folder): {}", path.display());
+            }
+            continue;
+        }
 
         // Skip if path matches gitignore patterns
         let is_dir = path.is_dir();
@@ -140,7 +154,7 @@ fn main() -> io::Result<()> {
             continue;
         }
 
-        // Skip if the path is a directory and test mode is enabled
+        // Skip if the path is a directory (for processing files only)
         if is_dir {
             if test_mode {
                 println!("Skipping directory: {}", path.display());
@@ -148,7 +162,7 @@ fn main() -> io::Result<()> {
             continue;
         }
 
-        // Check if the path is a file
+        // Check if the path is a file and apply size and extension filters
         if path.is_file() {
             let metadata = fs::metadata(&path)?;
             let file_size = metadata.len();
@@ -185,17 +199,15 @@ fn main() -> io::Result<()> {
                 .and_then(|e| e.to_str())
                 .map(|e| e.to_lowercase());
 
-            // Check if the file extension is in the excluded list
             if let Some(ref excluded_exts) = excluded_extensions {
                 if ext.is_some_and(|e| excluded_exts.contains(&e)) {
                     if test_mode {
                         println!("Skipping (excluded extension): {}", path.display());
                     }
-                    continue; // Skip files with excluded extensions
+                    continue;
                 }
             }
 
-            // If test mode is enabled, print the file being processed
             if test_mode {
                 println!("Processing: {} ({} bytes)", path.display(), file_size);
             }
@@ -206,7 +218,6 @@ fn main() -> io::Result<()> {
             file.read_to_end(&mut contents)?;
 
             if let Ok(text) = String::from_utf8(contents) {
-                // Write the file name and size to the output file
                 let filename = path
                     .file_name()
                     .and_then(|n| n.to_str())
@@ -218,10 +229,8 @@ fn main() -> io::Result<()> {
                     filename, file_size
                 )?;
                 write!(output, "{}", text)?;
-            } else {
-                if test_mode {
-                    println!("Skipping (not UTF-8): {}", path.display());
-                }
+            } else if test_mode {
+                println!("Skipping (not UTF-8): {}", path.display());
             }
         }
     }
