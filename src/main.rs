@@ -68,6 +68,13 @@ fn main() -> io::Result<()> {
         .add_line(None, "node_modules")
         .map_err(|e| Error::new(ErrorKind::Other, e))?; // Default ignore for node_modules
 
+    // Add common lock files to the ignore list
+    let lock_files = ["bun.lock", "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "Cargo.lock"];
+    for lock_file in &lock_files {
+        gitignore_builder.add_line(None, lock_file)
+            .map_err(|e| Error::new(ErrorKind::Other, e))?;
+    }
+
     // Check for .gitignore in the specified directory and add its rules
     let gitignore_path = Path::new(dir_path).join(".gitignore");
     if gitignore_path.exists() {
