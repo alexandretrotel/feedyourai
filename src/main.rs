@@ -91,9 +91,6 @@ fn main() -> io::Result<()> {
 
     // Build gitignore patterns
     let mut gitignore_builder = GitignoreBuilder::new(dir_path);
-    gitignore_builder
-        .add_line(None, "node_modules/")
-        .map_err(|e| Error::new(ErrorKind::Other, e))?; // Default ignore for node_modules
 
     // Add common lock files and system files to the ignore list
     let ignored_files = [
@@ -118,6 +115,14 @@ fn main() -> io::Result<()> {
     let gitignore = gitignore_builder
         .build()
         .unwrap_or_else(|_| Gitignore::empty());
+
+    // Add folders to ignore such as node_modules, .git, and .svn
+    let ignored_dirs = ["node_modules", ".git", ".svn", ".hg", ".idea", ".vscode"];
+    for ignored in &ignored_dirs {
+        gitignore_builder
+            .add_line(None, &format!("**/{}", ignored))
+            .map_err(|e| Error::new(ErrorKind::Other, e))?;
+    }
 
     // Ensure the output file is writable
     let mut output = File::create(output_file)?;
