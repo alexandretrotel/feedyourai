@@ -6,7 +6,7 @@ A command-line tool to combine text files from a directory into a single file fo
 
 - Combines multiple text files into one output file
 - Filters files by:
-  - Size (default: excludes files under 50KB)
+  - Size
   - File extensions (e.g., `.txt`, `.md`)
   - Custom minimum and maximum size limits
 - Preserves file boundaries with headers showing filename and size
