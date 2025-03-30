@@ -92,7 +92,7 @@ fn main() -> io::Result<()> {
     // Build gitignore patterns
     let mut gitignore_builder = GitignoreBuilder::new(dir_path);
     gitignore_builder
-        .add_line(None, "node_modules")
+        .add_line(None, "node_modules/")
         .map_err(|e| Error::new(ErrorKind::Other, e))?; // Default ignore for node_modules
 
     // Add common lock files and system files to the ignore list
