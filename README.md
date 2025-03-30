@@ -36,12 +36,12 @@ This installs the `feedyourai` binary to `~/.cargo/bin/`. Ensure this directory 
 
 ## Usage
 
-Run `feedyourai` in your terminal to combine files:
+Run `fyai` in your terminal to combine files:
 
 ### Basic Usage
 
 ```bash
-feedyourai
+fyai
 ```
 
 - Combines all files ≥ 50KB from the current directory into `feedyourai.txt`
@@ -50,7 +50,7 @@ feedyourai
 
 ```
 USAGE:
-    feedyourai [OPTIONS]
+    fyai [OPTIONS]
 
 OPTIONS:
     -d, --dir <DIR>          Sets the input directory [default: .]
@@ -67,18 +67,18 @@ OPTIONS:
 - Combine `.txt` and `.md` files from a specific directory:
 
   ```bash
-  feedyourai -d ./docs -e txt,md
+  fyai -d ./docs -e txt,md
   ```
 
 - Include all files (no size minimum) up to 1MB:
 
   ```bash
-  feedyourai -n 0 -m 1048576
+  fyai -n 0 -m 1048576
   ```
 
 - Custom output file with files between 10KB and 500KB:
   ```bash
-  feedyourai -n 10240 -m 512000 -o ai_input.txt
+  fyai -n 10240 -m 512000 -o ai_input.txt
   ```
 
 ## Output Format
@@ -98,7 +98,7 @@ The combined file includes headers for each source file:
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/yourusername/feedyourai.git
+   git clone https://github.com/alexandretrotel/feedyourai.git
    cd feedyourai
    ```
 
@@ -110,7 +110,7 @@ The combined file includes headers for each source file:
 
 3. Run it directly:
    ```bash
-   ./target/release/feedyourai
+   ./target/release/fyai
    ```
 
 ## Contributing
