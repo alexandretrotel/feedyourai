@@ -1,4 +1,5 @@
 use clap::{Arg, Command};
+use clipboard::{ClipboardContext, ClipboardProvider};
 use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use std::fs::{self, File};
 use std::io::{self, Error, ErrorKind, Read, Write};
@@ -216,5 +217,19 @@ fn main() -> io::Result<()> {
     }
 
     println!("Files combined successfully into {}", output_file);
+
+    // Read the output file and copy to clipboard
+    let mut output_contents = String::new();
+    File::open(output_file)?.read_to_string(&mut output_contents)?;
+
+    let mut clipboard: ClipboardContext = ClipboardProvider::new()
+        .map_err(|e| io::Error::new(ErrorKind::Other, format!("Clipboard error: {}", e)))?;
+
+    clipboard
+        .set_contents(output_contents)
+        .map_err(|e| io::Error::new(ErrorKind::Other, format!("Clipboard error: {}", e)))?;
+
+    println!("Output copied to clipboard successfully!");
+
     Ok(())
 }
