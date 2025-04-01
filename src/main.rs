@@ -124,6 +124,7 @@ fn main() -> io::Result<()> {
         ".vscode",
         "build",
         "dist",
+        "src-tauri"
     ];
     let mut output = File::create(output_file)?;
 
