@@ -16,6 +16,40 @@ fn is_in_ignored_dir(path: &Path, ignored_dirs: &[&str]) -> bool {
     })
 }
 
+fn get_directory_structure(root: &Path, gitignore: &Gitignore, ignored_dirs: &[&str]) -> String {
+    let mut structure = String::new();
+    structure.push_str("=== Project Directory Structure ===\n\n");
+
+    for entry in WalkDir::new(root).into_iter().filter_map(Result::ok) {
+        let path = entry.path();
+        
+        // Skip if in ignored directory
+        if is_in_ignored_dir(path, ignored_dirs) {
+            continue;
+        }
+
+        // Skip if matched by gitignore
+        let is_dir = path.is_dir();
+        if gitignore.matched(path, is_dir).is_ignore() {
+            continue;
+        }
+
+        let depth = entry.depth();
+        let indent = "  ".repeat(depth);
+        if let Some(name) = path.file_name() {
+            let marker = if path.is_dir() { "/" } else { "" };
+            structure.push_str(&format!(
+                "{}{}{}\n",
+                indent,
+                name.to_string_lossy(),
+                marker
+            ));
+        }
+    }
+    structure.push_str("\n");
+    structure
+}
+
 fn main() -> io::Result<()> {
     let matches = Command::new("FeedYourAI")
         .version("1.0.0")
@@ -127,6 +161,10 @@ fn main() -> io::Result<()> {
         "src-tauri"
     ];
     let mut output = File::create(output_file)?;
+
+    // Write the directory structure to the output file
+    let dir_structure = get_directory_structure(Path::new(dir_path), &gitignore, &ignored_dirs);
+    write!(output, "{}", dir_structure)?;
 
     println!("Processing files in: {}", dir_path);
 
