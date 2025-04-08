@@ -158,7 +158,10 @@ fn main() -> io::Result<()> {
         ".vscode",
         "build",
         "dist",
-        "src-tauri"
+        "src-tauri",
+        ".venv",
+        "__pycache__",
+        ".pytest_cache",
     ];
     let mut output = File::create(output_file)?;
 
