@@ -134,6 +134,7 @@ fn main() -> io::Result<()> {
         "pnpm-lock.yaml",
         "Cargo.lock",
         ".DS_Store",
+        "uv.lock",
     ];
     for ignored in &ignored_files {
         gitignore_builder
