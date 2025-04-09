@@ -163,6 +163,7 @@ fn main() -> io::Result<()> {
         ".venv",
         "__pycache__",
         ".pytest_cache",
+        ".next"
     ];
     let mut output = File::create(output_file)?;
 
