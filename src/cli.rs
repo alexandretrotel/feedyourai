@@ -61,10 +61,11 @@ pub fn parse_args() -> io::Result<Config> {
                 .help("Exclude files larger than this size in bytes"),
         )
         .arg(
-            Arg::new("test")
+            clap::Arg::new("test")
                 .short('t')
                 .long("test")
-                .help("Enable test mode to display debugging information"),
+                .action(clap::ArgAction::SetTrue)
+                .help("Enable test mode"),
         )
         .get_matches();
 
@@ -81,7 +82,7 @@ pub fn parse_args() -> io::Result<Config> {
     let max_size = matches
         .get_one::<String>("max_size")
         .and_then(|s| s.parse().ok());
-    let test_mode = matches.contains_id("test");
+    let test_mode = matches.get_flag("test");
 
     if test_mode {
         println!("DEBUG MODE ENABLED:");

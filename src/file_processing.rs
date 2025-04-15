@@ -87,9 +87,16 @@ pub fn process_files(
         .filter_map(Result::ok)
     {
         let path = entry.path();
+        if path == config.output {
+            if config.test_mode {
+                println!("Skipping (output file): {}", path.display());
+            }
+            continue;
+        }
+
         if is_in_ignored_dir(path, ignored_dirs) {
             if config.test_mode {
-                println!("Skipping (ignored folder): {}", path.display());
+                println!("Skipping (ignored directory): {}", path.display());
             }
             continue;
         }

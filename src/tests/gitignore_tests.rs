@@ -17,7 +17,7 @@ mod tests {
         );
         assert!(
             gitignore
-                .matched(temp_dir.path().join("temp/file.txt"), true)
+                .matched(temp_dir.path().join("temp/file.txt"), false)
                 .is_ignore()
         );
         assert!(

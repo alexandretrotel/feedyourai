@@ -41,17 +41,28 @@ mod tests {
                     .long("max-size")
                     .value_name("BYTES"),
             )
-            .arg(clap::Arg::new("test").short('t').long("test"))
+            .arg(
+                clap::Arg::new("test")
+                    .short('t')
+                    .long("test")
+                    .action(clap::ArgAction::SetTrue),
+            )
             .try_get_matches_from(args)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e.to_string()))?;
 
         Ok(Config {
             directory: matches.get_one::<String>("directory").unwrap().into(),
             output: matches.get_one::<String>("output").unwrap().into(),
-            extensions: matches.get_one::<String>("extensions").map(|ext| {
-                ext.split(',')
-                    .map(|s| s.trim().to_lowercase())
-                    .collect::<Vec<_>>()
+            extensions: matches.get_one::<String>("extensions").and_then(|ext| {
+                if ext.is_empty() {
+                    Some(vec![])
+                } else {
+                    Some(
+                        ext.split(',')
+                            .map(|s| s.trim().to_lowercase())
+                            .collect::<Vec<_>>(),
+                    )
+                }
             }),
             min_size: matches
                 .get_one::<String>("min_size")
@@ -59,7 +70,7 @@ mod tests {
             max_size: matches
                 .get_one::<String>("max_size")
                 .and_then(|s| s.parse().ok()),
-            test_mode: matches.contains_id("test"),
+            test_mode: matches.get_flag("test"),
         })
     }
 
