@@ -162,12 +162,13 @@ pub fn process_files(
         let mut file = File::open(path)?;
         let mut contents = Vec::new();
         file.read_to_end(&mut contents)?;
+        let file_name = path.file_name().unwrap_or_default();
 
         if let Ok(text) = String::from_utf8(contents) {
             writeln!(
                 output,
                 "\n=== File: {} ({} bytes) ===\n",
-                path.display(),
+                file_name.to_string_lossy(),
                 file_size
             )?;
             write!(output, "{}", text)?;
