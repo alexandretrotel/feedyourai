@@ -1,1 +1,5 @@
-/target
+# Output files
+target/
+
+# FeedYourAI
+feedyourai.txt
