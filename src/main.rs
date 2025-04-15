@@ -5,6 +5,9 @@ use crate::clipboard::copy_to_clipboard;
 use crate::file_processing::{get_directory_structure, process_files};
 use crate::gitignore::build_gitignore;
 
+#[cfg(test)]
+mod tests;
+
 mod cli;
 mod clipboard;
 mod file_processing;
