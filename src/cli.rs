@@ -20,7 +20,7 @@ pub struct Config {
 /// - `Err(io::Error)`: If parsing fails (e.g., invalid input).
 pub fn parse_args() -> io::Result<Config> {
     let matches = Command::new("FeedYourAI")
-        .version("1.3.0")
+        .version("1.3.1")
         .about("A tool to combine text files for AI processing with filtering options.")
         .arg(
             Arg::new("directory")
@@ -43,7 +43,7 @@ pub fn parse_args() -> io::Result<Config> {
                 .short('e')
                 .long("ext")
                 .value_name("EXT")
-                .help("Comma-separated list of file extensions to include (e.g., txt,md)"),
+                .help("Comma-separated list of file extensions to exclude (e.g., txt,md)"),
         )
         .arg(
             Arg::new("min_size")
@@ -51,7 +51,6 @@ pub fn parse_args() -> io::Result<Config> {
                 .long("min-size")
                 .value_name("BYTES")
                 .help("Exclude files smaller than this size in bytes")
-                .default_value("51200"),
         )
         .arg(
             Arg::new("max_size")
@@ -91,7 +90,7 @@ pub fn parse_args() -> io::Result<Config> {
         println!(" - Min File Size: {} bytes", min_size.unwrap_or(0));
         println!(" - Max File Size: {} bytes", max_size.unwrap_or(u64::MAX));
         println!(
-            " - Included Extensions: {:?}",
+            " - Excluded Extensions: {:?}",
             extensions.as_ref().map(|e| e.join(", "))
         );
     }

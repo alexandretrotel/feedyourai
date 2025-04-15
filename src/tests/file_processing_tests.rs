@@ -49,7 +49,7 @@ mod tests {
         let config = Config {
             directory: temp_dir.path().to_path_buf(),
             output: temp_dir.path().join("output.txt"),
-            extensions: Some(vec!["txt".to_string(), "md".to_string()]),
+            extensions: None,
             min_size: Some(0),
             max_size: None,
             test_mode: false,

@@ -111,7 +111,7 @@ pub fn process_files(
 
         if is_dir {
             if config.test_mode {
-                println!("Skipping directory: {}", path.display());
+                println!("Skipping (directory): {}", path.display());
             }
             continue;
         }
@@ -149,7 +149,7 @@ pub fn process_files(
             .and_then(|e| e.to_str())
             .map(|e| e.to_lowercase());
         if let Some(ref exts) = config.extensions {
-            if ext.is_none() || !exts.contains(&ext.unwrap()) {
+            if ext.is_none() || exts.contains(&ext.unwrap()) {
                 if config.test_mode {
                     println!("Skipping (excluded extension): {}", path.display());
                 }
