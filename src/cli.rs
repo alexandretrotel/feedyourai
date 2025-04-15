@@ -20,7 +20,7 @@ pub struct Config {
 /// - `Err(io::Error)`: If parsing fails (e.g., invalid input).
 pub fn parse_args() -> io::Result<Config> {
     let matches = Command::new("FeedYourAI")
-        .version("1.2.4")
+        .version("1.3.0")
         .about("A tool to combine text files for AI processing with filtering options.")
         .arg(
             Arg::new("directory")

@@ -7,7 +7,7 @@ mod tests {
     // Simulate CLI arguments for testing
     fn simulate_args(args: &[&str]) -> io::Result<Config> {
         let matches = clap::Command::new("FeedYourAI")
-            .version("1.2.4")
+            .version("1.3.0")
             .arg(
                 clap::Arg::new("directory")
                     .short('d')
