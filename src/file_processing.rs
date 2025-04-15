@@ -176,5 +176,6 @@ pub fn process_files(
         }
     }
 
+    output.flush()?;
     Ok(())
 }

@@ -9,21 +9,22 @@ mod tests {
         let temp_dir = setup_temp_dir();
         create_gitignore(temp_dir.path(), "*.log\ntemp/")?;
 
-        let gitignore = build_gitignore(temp_dir.path(), false)?;
+        let gitignore = build_gitignore(temp_dir.path(), true)?; // Enable test_mode for debugging
+        let temp_file = temp_dir.path().join("temp/file.txt");
+        let is_ignored = gitignore.matched(&temp_file, false).is_ignore();
+        println!("Checking temp/file.txt: is_ignored = {}", is_ignored);
+        assert!(is_ignored, "temp/file.txt should be ignored");
         assert!(
             gitignore
                 .matched(temp_dir.path().join("test.log"), false)
-                .is_ignore()
-        );
-        assert!(
-            gitignore
-                .matched(temp_dir.path().join("temp/file.txt"), false)
-                .is_ignore()
+                .is_ignore(),
+            "test.log should be ignored"
         );
         assert!(
             !gitignore
                 .matched(temp_dir.path().join("other.txt"), false)
-                .is_ignore()
+                .is_ignore(),
+            "other.txt should not be ignored"
         );
         Ok(())
     }

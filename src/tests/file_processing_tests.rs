@@ -89,8 +89,11 @@ mod tests {
         process_files(&config, &gitignore, &ignored_dirs, &dir_structure)?;
 
         let output_content = fs::read_to_string(&config.output)?;
-        assert!(!output_content.contains("small.txt"));
-        assert!(output_content.contains("large.txt"));
+        assert!(
+            !output_content.contains("=== File: small.txt"),
+            "Output contains small.txt header"
+        );
+        assert!(output_content.contains("=== File: large.txt"));
         Ok(())
     }
 
@@ -117,7 +120,10 @@ mod tests {
 
         // Output should not include non-UTF-8 file content
         let output_content = fs::read_to_string(&config.output)?;
-        assert!(!output_content.contains("non_utf8.bin"));
+        assert!(
+            !output_content.contains("=== File: non_utf8.bin"),
+            "Output contains non_utf8.bin header"
+        );
         Ok(())
     }
 }

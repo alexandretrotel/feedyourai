@@ -1,4 +1,5 @@
 use ignore::gitignore::{Gitignore, GitignoreBuilder};
+use std::fs;
 use std::io::{self, Error, ErrorKind};
 use std::path::Path;
 
@@ -34,6 +35,10 @@ pub fn build_gitignore(dir_path: &Path, test_mode: bool) -> io::Result<Gitignore
         gitignore_builder.add(&gitignore_path);
         if test_mode {
             println!("Loaded .gitignore from: {:?}", gitignore_path);
+            // Debug: Read and print .gitignore contents
+            if let Ok(contents) = fs::read_to_string(&gitignore_path) {
+                println!(".gitignore contents:\n{}", contents);
+            }
         }
     }
 
