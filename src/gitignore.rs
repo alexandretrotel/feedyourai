@@ -43,7 +43,17 @@ pub fn build_gitignore(dir_path: &Path, test_mode: bool) -> io::Result<Gitignore
         .map_err(|e| Error::new(ErrorKind::Other, e))
 }
 
-/// Normalizes directory entries in .gitignore to `folder/**` format.
+/// Normalizes existing .gitignore content by converting directory entries to `folder/**`.
+/// If the file doesn't exist, it does nothing.
+/// If `test_mode` is true, it prints debug information about the changes made.
+///
+/// # Arguments
+/// - `gitignore_path`: The path to the .gitignore file.
+/// - `test_mode`: Whether to print debug information.
+///
+/// # Returns
+/// - `Ok(())`: If the normalization is successful.
+/// - `Err(io::Error)`: If an error occurs while reading or writing the file.
 fn normalize_gitignore(gitignore_path: &Path, test_mode: bool) -> io::Result<()> {
     if !gitignore_path.exists() {
         return Ok(());
@@ -63,6 +73,16 @@ fn normalize_gitignore(gitignore_path: &Path, test_mode: bool) -> io::Result<()>
 }
 
 /// Normalizes lines in .gitignore content, converting directory entries to `folder/**`.
+/// If a line is empty, starts with `#`, or `!`, it is left unchanged.
+/// If a line is a directory without `**`, it is converted to `folder/**`.
+/// If `test_mode` is true, it prints debug information about the changes made.
+///
+/// # Arguments
+/// - `existing_content`: The existing content of the .gitignore file.
+/// - `test_mode`: Whether to print debug information.
+///
+/// # Returns
+/// - `(Vec<String>, bool)`: A tuple containing the normalized lines and a boolean indicating if any changes were made.
 fn normalize_lines(existing_content: &str, test_mode: bool) -> (Vec<String>, bool) {
     let mut normalized_lines = Vec::new();
     let mut lines_changed = false;
@@ -103,6 +123,18 @@ fn normalize_lines(existing_content: &str, test_mode: bool) -> (Vec<String>, boo
 }
 
 /// Appends ignored files and directories to .gitignore if they don't exist.
+/// If the file doesn't exist, it creates it.
+/// If `test_mode` is true, it prints debug information about the changes made.
+///
+/// # Arguments
+/// - `gitignore_path`: The path to the .gitignore file.
+/// - `ignored_files`: A slice of file names to ignore.
+/// - `ignored_dirs`: A slice of directory names to ignore.
+/// - `test_mode`: Whether to print debug information.
+///
+/// # Returns
+/// - `Ok(())`: If the appending is successful.
+/// - `Err(io::Error)`: If an error occurs while reading or writing the file.
 fn append_ignored_items(
     gitignore_path: &Path,
     ignored_files: &[&str],
@@ -132,6 +164,18 @@ fn append_ignored_items(
 }
 
 /// Appends ignored files to .gitignore.
+/// If the file doesn't exist, it creates it.
+/// If `test_mode` is true, it prints debug information about the changes made.
+///
+/// # Arguments
+/// - `file`: The file handle to the .gitignore file.
+/// - `existing_content`: The existing content of the .gitignore file.
+/// - `ignored_files`: A slice of file names to ignore.
+/// - `test_mode`: Whether to print debug information.
+///
+/// # Returns
+/// - `Ok(())`: If the appending is successful.
+/// - `Err(io::Error)`: If an error occurs while writing to the file.
 fn append_files(
     file: &mut fs::File,
     existing_content: &str,
@@ -152,6 +196,18 @@ fn append_files(
 }
 
 /// Appends ignored directories to .gitignore in `folder/**` format.
+/// If the file doesn't exist, it creates it.
+/// If `test_mode` is true, it prints debug information about the changes made.
+///
+/// # Arguments
+/// - `file`: The file handle to the .gitignore file.
+/// - `existing_content`: The existing content of the .gitignore file.
+/// - `ignored_dirs`: A slice of directory names to ignore.
+/// - `test_mode`: Whether to print debug information.
+///
+/// # Returns
+/// - `Ok(())`: If the appending is successful.
+/// - `Err(io::Error)`: If an error occurs while writing to the file.
 fn append_directories(
     file: &mut fs::File,
     existing_content: &str,
@@ -176,6 +232,17 @@ fn append_directories(
 }
 
 /// Loads .gitignore into the GitignoreBuilder.
+/// If the file doesn't exist, it does nothing.
+/// If `test_mode` is true, it prints debug information about the loaded file.
+///
+/// # Arguments
+/// - `builder`: The GitignoreBuilder instance.
+/// - `gitignore_path`: The path to the .gitignore file.
+/// - `test_mode`: Whether to print debug information.
+///
+/// # Returns
+/// - `Ok(())`: If the loading is successful.
+/// - `Err(io::Error)`: If an error occurs while reading the file.
 fn load_gitignore(
     builder: &mut GitignoreBuilder,
     gitignore_path: &Path,

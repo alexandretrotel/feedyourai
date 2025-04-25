@@ -15,6 +15,10 @@ mod gitignore;
 
 /// Main entry point for FeedYourAI.
 /// Orchestrates CLI parsing, file processing, and clipboard operations.
+/// 
+/// # Returns
+/// - `Ok(())`: On successful execution.
+/// - `Err(io::Error)`: If an error occurs during execution
 fn main() -> io::Result<()> {
     let config = parse_args()?;
     let gitignore = build_gitignore(&config.directory, config.test_mode)?;
