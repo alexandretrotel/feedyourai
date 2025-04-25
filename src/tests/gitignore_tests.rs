@@ -6,7 +6,10 @@ mod tests {
     };
     use tempfile::TempDir;
 
-    use crate::gitignore::{build_gitignore, normalize_gitignore, normalize_lines};
+    use crate::{
+        gitignore::{append_ignored_items, build_gitignore, normalize_gitignore, normalize_lines},
+        tests::common::{read_file_content, setup_gitignore},
+    };
 
     #[test]
     fn test_build_gitignore_new_file() -> io::Result<()> {
@@ -294,5 +297,18 @@ mod tests {
         let (lines, changed) = normalize_lines(input, false);
         assert_eq!(lines, vec!["folder with spaces"]);
         assert_eq!(changed, false);
+    }
+
+    #[test]
+    fn test_create_new_gitignore() {
+        let (_temp_dir, gitignore_path) = setup_gitignore("");
+        let files = &["file1.txt", "file2.txt"];
+        let dirs = &["dir1", "dir2"];
+
+        let result = append_ignored_items(&gitignore_path, files, dirs, false);
+        assert!(result.is_ok());
+
+        let content = read_file_content(&gitignore_path);
+        assert_eq!(content, "file1.txt\nfile2.txt\ndir1/**\ndir2/**\n");
     }
 }

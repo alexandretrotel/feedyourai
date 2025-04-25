@@ -135,7 +135,7 @@ pub fn normalize_lines(existing_content: &str, test_mode: bool) -> (Vec<String>,
 /// # Returns
 /// - `Ok(())`: If the appending is successful.
 /// - `Err(io::Error)`: If an error occurs while reading or writing the file.
-fn append_ignored_items(
+pub fn append_ignored_items(
     gitignore_path: &Path,
     ignored_files: &[&str],
     ignored_dirs: &[&str],

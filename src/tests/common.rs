@@ -34,3 +34,16 @@ pub fn setup_test_dir() -> (TempDir, Gitignore) {
 
     (temp_dir, gitignore)
 }
+
+pub fn setup_gitignore(content: &str) -> (TempDir, std::path::PathBuf) {
+    let temp_dir = TempDir::new().unwrap();
+    let gitignore_path = temp_dir.path().join(".gitignore");
+    if !content.is_empty() {
+        fs::write(&gitignore_path, content).unwrap();
+    }
+    (temp_dir, gitignore_path)
+}
+
+pub fn read_file_content(path: &Path) -> String {
+    fs::read_to_string(path).unwrap_or_default()
+}
