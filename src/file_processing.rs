@@ -99,31 +99,19 @@ pub fn process_files(
     {
         let path = entry.path();
         if path == config.output {
-            if config.test_mode {
-                println!("Skipping (output file): {}", path.display());
-            }
             continue;
         }
 
         if is_in_ignored_dir(path, ignored_dirs) {
-            if config.test_mode {
-                println!("Skipping (ignored directory): {}", path.display());
-            }
             continue;
         }
 
         let is_dir = path.is_dir();
         if gitignore.matched(path, is_dir).is_ignore() {
-            if config.test_mode {
-                println!("Skipping (gitignore): {}", path.display());
-            }
             continue;
         }
 
         if is_dir {
-            if config.test_mode {
-                println!("Skipping (directory): {}", path.display());
-            }
             continue;
         }
 
@@ -132,25 +120,11 @@ pub fn process_files(
 
         if let Some(min) = config.min_size {
             if file_size < min {
-                if config.test_mode {
-                    println!(
-                        "Skipping (too small): {} ({} bytes)",
-                        path.display(),
-                        file_size
-                    );
-                }
                 continue;
             }
         }
         if let Some(max) = config.max_size {
             if file_size > max {
-                if config.test_mode {
-                    println!(
-                        "Skipping (too large): {} ({} bytes)",
-                        path.display(),
-                        file_size
-                    );
-                }
                 continue;
             }
         }
@@ -161,9 +135,6 @@ pub fn process_files(
             .map(|e| e.to_lowercase());
         if let Some(ref exts) = config.extensions {
             if ext.is_none() || exts.contains(&ext.unwrap()) {
-                if config.test_mode {
-                    println!("Skipping (excluded extension): {}", path.display());
-                }
                 continue;
             }
         }
@@ -183,8 +154,6 @@ pub fn process_files(
                 file_size
             )?;
             write!(output, "{}", text)?;
-        } else if config.test_mode {
-            println!("Skipping (not UTF-8): {}", path.display());
         }
     }
 

@@ -14,7 +14,6 @@ mod tests {
         assert_eq!(config.extensions, None);
         assert_eq!(config.min_size, None);
         assert_eq!(config.max_size, None);
-        assert_eq!(config.test_mode, false);
     }
 
     #[test]
@@ -33,7 +32,6 @@ mod tests {
         assert_eq!(config.extensions, None);
         assert_eq!(config.min_size, None);
         assert_eq!(config.max_size, None);
-        assert_eq!(config.test_mode, false);
     }
 
     #[test]
@@ -84,14 +82,6 @@ mod tests {
             result.unwrap_err().to_string(),
             "Invalid value for max_size"
         );
-    }
-
-    #[test]
-    fn test_test_mode() {
-        let args = create_commands().get_matches_from(vec!["feedyourai", "--test"]);
-        let config = config_from_matches(args).unwrap();
-
-        assert_eq!(config.test_mode, true);
     }
 
     #[test]

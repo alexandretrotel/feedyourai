@@ -38,7 +38,6 @@ mod tests {
             result: Ok(cli::Config {
                 directory: temp_dir.path().to_path_buf(),
                 output: temp_output.clone(),
-                test_mode: false,
                 extensions: vec![].into(),
                 min_size: Some(0),
                 max_size: Some(1024),
@@ -48,7 +47,7 @@ mod tests {
         // Simulate main's logic with the mock
         let result = mock_cli.parse_args().and_then(|config| {
             // Use real implementations for other dependencies or mock them similarly
-            let gitignore = build_gitignore(&config.directory, config.test_mode)?;
+            let gitignore = build_gitignore(&config.directory)?;
             let ignored_dirs = [
                 "node_modules",
                 ".git",

@@ -19,7 +19,7 @@ mod tests {
     #[test]
     fn test_build_gitignore_new_file() -> io::Result<()> {
         let temp_dir = TempDir::new()?;
-        let gitignore = build_gitignore(temp_dir.path(), false)?;
+        let gitignore = build_gitignore(temp_dir.path())?;
 
         // Verify .gitignore file was created
         let gitignore_path = temp_dir.path().join(".gitignore");
@@ -86,7 +86,7 @@ mod tests {
         let gitignore_path = temp_dir.path().join(".gitignore");
 
         // Test with a non-existent .gitignore file
-        let result = normalize_gitignore(&gitignore_path, false);
+        let result = normalize_gitignore(&gitignore_path);
         assert!(result.is_ok(), "Expected Ok for non-existent file");
 
         Ok(())
@@ -101,7 +101,7 @@ mod tests {
         let content = "node_modules/**\n*.log\n";
         File::create(&gitignore_path)?.write_all(content.as_bytes())?;
 
-        let result = normalize_gitignore(&gitignore_path, false);
+        let result = normalize_gitignore(&gitignore_path);
         assert!(result.is_ok(), "Expected Ok for no changes needed");
 
         // Verify content unchanged
@@ -121,7 +121,7 @@ mod tests {
         let expected_content = "node_modules/**\nbuild/**\n*.log\n";
         File::create(&gitignore_path)?.write_all(original_content.as_bytes())?;
 
-        let result = normalize_gitignore(&gitignore_path, false);
+        let result = normalize_gitignore(&gitignore_path);
         assert!(result.is_ok(), "Expected Ok for successful normalization");
 
         // Verify content was normalized
@@ -146,7 +146,7 @@ mod tests {
 
         // Capture stdout for test_mode output
         let output = std::panic::catch_unwind(|| {
-            let result = normalize_gitignore(&gitignore_path, true);
+            let result = normalize_gitignore(&gitignore_path);
             assert!(result.is_ok(), "Expected Ok in test mode");
         });
 
@@ -173,7 +173,7 @@ mod tests {
         // Create empty .gitignore
         File::create(&gitignore_path)?;
 
-        let result = normalize_gitignore(&gitignore_path, false);
+        let result = normalize_gitignore(&gitignore_path);
         assert!(result.is_ok(), "Expected Ok for empty file");
 
         // Verify content unchanged (still empty)
@@ -195,7 +195,7 @@ mod tests {
         permissions.set_readonly(true);
         fs::set_permissions(&gitignore_path, permissions)?;
 
-        let result = normalize_gitignore(&gitignore_path, false);
+        let result = normalize_gitignore(&gitignore_path);
         assert!(result.is_err(), "Expected Err for read-only file");
 
         Ok(())
@@ -204,7 +204,7 @@ mod tests {
     #[test]
     fn test_empty_content() {
         let input = "";
-        let (lines, changed) = normalize_lines(input, false);
+        let (lines, changed) = normalize_lines(input);
         assert_eq!(lines, Vec::<String>::new());
         assert_eq!(changed, false);
     }
@@ -212,7 +212,7 @@ mod tests {
     #[test]
     fn test_empty_line() {
         let input = "\n";
-        let (lines, changed) = normalize_lines(input, false);
+        let (lines, changed) = normalize_lines(input);
         assert_eq!(lines, vec![""]);
         assert_eq!(changed, false);
     }
@@ -220,7 +220,7 @@ mod tests {
     #[test]
     fn test_comment_line() {
         let input = "# This is a comment";
-        let (lines, changed) = normalize_lines(input, false);
+        let (lines, changed) = normalize_lines(input);
         assert_eq!(lines, vec!["# This is a comment"]);
         assert_eq!(changed, false);
     }
@@ -228,7 +228,7 @@ mod tests {
     #[test]
     fn test_negation_line() {
         let input = "!important.txt";
-        let (lines, changed) = normalize_lines(input, false);
+        let (lines, changed) = normalize_lines(input);
         assert_eq!(lines, vec!["!important.txt"]);
         assert_eq!(changed, false);
     }
@@ -236,7 +236,7 @@ mod tests {
     #[test]
     fn test_directory_normalization() {
         let input = "folder/";
-        let (lines, changed) = normalize_lines(input, false);
+        let (lines, changed) = normalize_lines(input);
         assert_eq!(lines, vec!["folder/**"]);
         assert_eq!(changed, true);
     }
@@ -244,7 +244,7 @@ mod tests {
     #[test]
     fn test_directory_already_normalized() {
         let input = "folder/**";
-        let (lines, changed) = normalize_lines(input, false);
+        let (lines, changed) = normalize_lines(input);
         assert_eq!(lines, vec!["folder/**"]);
         assert_eq!(changed, false);
     }
@@ -252,7 +252,7 @@ mod tests {
     #[test]
     fn test_file_pattern_unchanged() {
         let input = "*.log";
-        let (lines, changed) = normalize_lines(input, false);
+        let (lines, changed) = normalize_lines(input);
         assert_eq!(lines, vec!["*.log"]);
         assert_eq!(changed, false);
     }
@@ -260,7 +260,7 @@ mod tests {
     #[test]
     fn test_file_with_extension_unchanged() {
         let input = "config.json";
-        let (lines, changed) = normalize_lines(input, false);
+        let (lines, changed) = normalize_lines(input);
         assert_eq!(lines, vec!["config.json"]);
         assert_eq!(changed, false);
     }
@@ -275,7 +275,7 @@ mod tests {
             "!important.txt",
             "another_folder/**",
         ];
-        let (lines, changed) = normalize_lines(input, false);
+        let (lines, changed) = normalize_lines(input);
         assert_eq!(lines, expected);
         assert_eq!(changed, true);
     }
@@ -283,7 +283,7 @@ mod tests {
     #[test]
     fn test_trailing_slashes_and_wildcards() {
         let input = "folder///";
-        let (lines, changed) = normalize_lines(input, false);
+        let (lines, changed) = normalize_lines(input);
         assert_eq!(lines, vec!["folder/**"]);
         assert_eq!(changed, true);
     }
@@ -291,7 +291,7 @@ mod tests {
     #[test]
     fn test_test_mode_no_output() {
         let input = "folder/";
-        let (lines, changed) = normalize_lines(input, true);
+        let (lines, changed) = normalize_lines(input);
         assert_eq!(lines, vec!["folder/**"]);
         assert_eq!(changed, true);
     }
@@ -299,7 +299,7 @@ mod tests {
     #[test]
     fn test_line_with_spaces_unchanged() {
         let input = "folder with spaces";
-        let (lines, changed) = normalize_lines(input, false);
+        let (lines, changed) = normalize_lines(input);
         assert_eq!(lines, vec!["folder with spaces"]);
         assert_eq!(changed, false);
     }
@@ -310,7 +310,7 @@ mod tests {
         let files = &["file1.txt", "file2.txt"];
         let dirs = &["dir1", "dir2"];
 
-        let result = append_ignored_items(&gitignore_path, files, dirs, false);
+        let result = append_ignored_items(&gitignore_path, files, dirs);
         assert!(result.is_ok());
 
         let content = read_file_content(&gitignore_path);
@@ -323,7 +323,7 @@ mod tests {
         let files = &["file1.txt"];
         let dirs = &["dir1"];
 
-        let result = append_ignored_items(&gitignore_path, files, dirs, false);
+        let result = append_ignored_items(&gitignore_path, files, dirs);
         assert!(result.is_ok());
 
         let content = read_file_content(&gitignore_path);
@@ -336,7 +336,7 @@ mod tests {
         let files: &[&str] = &[];
         let dirs: &[&str] = &[];
 
-        let result = append_ignored_items(&gitignore_path, files, dirs, false);
+        let result = append_ignored_items(&gitignore_path, files, dirs);
         assert!(result.is_ok());
 
         let content = read_file_content(&gitignore_path);
@@ -349,7 +349,7 @@ mod tests {
         let files = &["file1.txt"];
         let dirs = &["dir1/"];
 
-        let result = append_ignored_items(invalid_path, files, dirs, false);
+        let result = append_ignored_items(invalid_path, files, dirs);
         assert!(result.is_err());
     }
 
@@ -361,7 +361,7 @@ mod tests {
         let ignored_files = vec!["node_modules", ".env"];
         let existing_content = "";
 
-        append_files(&mut file, existing_content, &ignored_files, false)?;
+        append_files(&mut file, existing_content, &ignored_files)?;
 
         let content = read_file_content(&file_path);
         assert_eq!(content, "node_modules\n.env\n");
@@ -383,7 +383,7 @@ mod tests {
         file.read_to_string(&mut existing_content)?;
         let mut file = File::create(&file_path)?;
 
-        append_files(&mut file, &existing_content, &ignored_files, false)?;
+        append_files(&mut file, &existing_content, &ignored_files)?;
 
         let content = read_file_content(&file_path);
         assert_eq!(content, ".env\n");
@@ -398,7 +398,7 @@ mod tests {
         let ignored_files: Vec<&str> = vec![];
         let existing_content = "node_modules\n";
 
-        append_files(&mut file, &existing_content, &ignored_files, false)?;
+        append_files(&mut file, &existing_content, &ignored_files)?;
 
         let content = read_file_content(&file_path);
         assert_eq!(content, "");
@@ -410,14 +410,8 @@ mod tests {
         let mut temp_file = NamedTempFile::new()?;
         let existing_content = "";
         let ignored_dirs = vec!["node_modules", "dist"];
-        let test_mode = false;
 
-        append_directories(
-            temp_file.as_file_mut(),
-            existing_content,
-            &ignored_dirs,
-            test_mode,
-        )?;
+        append_directories(temp_file.as_file_mut(), existing_content, &ignored_dirs)?;
         let content = read_file_content(temp_file.path());
 
         assert_eq!(content, "node_modules/**\ndist/**\n");
@@ -430,14 +424,8 @@ mod tests {
         let existing_content = "node_modules/**";
         writeln!(temp_file.as_file_mut(), "{}", existing_content)?;
         let ignored_dirs = vec!["node_modules", "dist"];
-        let test_mode = false;
 
-        append_directories(
-            temp_file.as_file_mut(),
-            existing_content,
-            &ignored_dirs,
-            test_mode,
-        )?;
+        append_directories(temp_file.as_file_mut(), existing_content, &ignored_dirs)?;
         let content = read_file_content(temp_file.path());
 
         assert_eq!(content, "node_modules/**\ndist/**\n");
@@ -449,14 +437,8 @@ mod tests {
         let mut temp_file = NamedTempFile::new()?;
         let existing_content = "";
         let ignored_dirs: Vec<&str> = vec![];
-        let test_mode = false;
 
-        append_directories(
-            temp_file.as_file_mut(),
-            existing_content,
-            &ignored_dirs,
-            test_mode,
-        )?;
+        append_directories(temp_file.as_file_mut(), existing_content, &ignored_dirs)?;
         let content = read_file_content(temp_file.path());
 
         assert_eq!(content, "");
@@ -472,7 +454,7 @@ mod tests {
 
         let mut builder = GitignoreBuilder::new(temp_dir.path());
 
-        let result = load_gitignore(&mut builder, &gitignore_path, false);
+        let result = load_gitignore(&mut builder, &gitignore_path);
 
         assert!(result.is_ok());
     }
@@ -484,7 +466,7 @@ mod tests {
 
         let mut builder = GitignoreBuilder::new(temp_dir.path());
 
-        let result = load_gitignore(&mut builder, &gitignore_path, false);
+        let result = load_gitignore(&mut builder, &gitignore_path);
 
         assert!(result.is_ok());
     }
@@ -500,7 +482,7 @@ mod tests {
 
         let mut builder = GitignoreBuilder::new(temp_dir.path());
 
-        let result = load_gitignore(&mut builder, &gitignore_path, false);
+        let result = load_gitignore(&mut builder, &gitignore_path);
 
         assert!(result.is_ok());
     }

@@ -10,7 +10,6 @@ pub struct Config {
     pub extensions: Option<Vec<String>>,
     pub min_size: Option<u64>,
     pub max_size: Option<u64>,
-    pub test_mode: bool,
 }
 
 /// Creates a `Config` from parsed `clap` argument matches.
@@ -49,19 +48,6 @@ pub fn config_from_matches(matches: clap::ArgMatches) -> io::Result<Config> {
             })
         })
         .transpose()?;
-    let test_mode = matches.get_flag("test");
-
-    if test_mode {
-        println!("DEBUG MODE ENABLED:");
-        println!(" - Input Directory: {:?}", directory);
-        println!(" - Output File: {:?}", output);
-        println!(" - Min File Size: {} bytes", min_size.unwrap_or(0));
-        println!(" - Max File Size: {} bytes", max_size.unwrap_or(u64::MAX));
-        println!(
-            " - Excluded Extensions: {:?}",
-            extensions.as_ref().map(|e| e.join(", "))
-        );
-    }
 
     Ok(Config {
         directory,
@@ -69,7 +55,6 @@ pub fn config_from_matches(matches: clap::ArgMatches) -> io::Result<Config> {
         extensions,
         min_size,
         max_size,
-        test_mode,
     })
 }
 

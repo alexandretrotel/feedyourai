@@ -21,7 +21,7 @@ mod gitignore;
 /// - `Err(io::Error)`: If an error occurs during execution
 fn main() -> io::Result<()> {
     let config = parse_args()?;
-    let gitignore = build_gitignore(&config.directory, config.test_mode)?;
+    let gitignore = build_gitignore(&config.directory)?;
     let ignored_dirs = [
         "node_modules",
         ".git",

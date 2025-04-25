@@ -192,7 +192,6 @@ mod tests {
             extensions: None,
             min_size: Some(0),
             max_size: None,
-            test_mode: false,
         };
 
         let ignored_dirs = ["node_modules"];
@@ -220,7 +219,6 @@ mod tests {
             extensions: None,
             min_size: Some(10000),
             max_size: Some(100000),
-            test_mode: false,
         };
 
         let ignored_dirs = ["node_modules"];
@@ -250,7 +248,6 @@ mod tests {
             extensions: None,
             min_size: Some(0),
             max_size: None,
-            test_mode: true,
         };
 
         let ignored_dirs = ["node_modules"];
