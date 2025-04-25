@@ -15,10 +15,6 @@ pub fn create_file<P: AsRef<Path>>(path: P, contents: &str) -> std::io::Result<(
     Ok(())
 }
 
-pub fn create_gitignore<P: AsRef<Path>>(dir: P, contents: &str) -> std::io::Result<()> {
-    create_file(dir.as_ref().join(".gitignore"), contents)
-}
-
 pub fn setup_test_dir() -> (TempDir, Gitignore) {
     let temp_dir = TempDir::new().unwrap();
     let root = temp_dir.path();
