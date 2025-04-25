@@ -2,11 +2,13 @@
 mod tests {
     use crate::cli::Config;
     use crate::file_processing::{get_directory_structure, is_in_ignored_dir, process_files};
-    use crate::tests::common::{create_file, setup_temp_dir};
+    use crate::tests::common::{create_file, setup_temp_dir, setup_test_dir};
     use ignore::gitignore::Gitignore;
     use std::fs;
+    use std::fs::File;
     use std::io::{self, Write};
     use std::path::{Path, PathBuf};
+    use tempfile::TempDir;
 
     fn create_gitignore_empty() -> Gitignore {
         Gitignore::empty()
@@ -87,6 +89,95 @@ mod tests {
         assert!(structure.contains("subdir/"));
         assert!(structure.contains("file2.txt"));
         Ok(())
+    }
+
+    #[test]
+    fn test_basic_directory_structure() {
+        let (temp_dir, gitignore) = setup_test_dir();
+        let root = temp_dir.path();
+        let ignored_dirs = vec![];
+
+        let result = get_directory_structure(root, &gitignore, &ignored_dirs).unwrap();
+
+        assert!(result.contains("=== Project Directory Structure ==="));
+        assert!(result.contains(".gitignore"));
+        assert!(result.contains("README.md"));
+        assert!(result.contains("src/"));
+        assert!(result.contains("main.rs"));
+        assert!(result.contains("tests/"));
+        assert!(result.contains("test1.rs"));
+    }
+
+    #[test]
+    fn test_ignored_directories() {
+        let (temp_dir, gitignore) = setup_test_dir();
+        let root = temp_dir.path();
+        let ignored_dirs = vec!["tests"];
+
+        let result = get_directory_structure(root, &gitignore, &ignored_dirs).unwrap();
+
+        assert!(result.contains("=== Project Directory Structure ==="));
+        assert!(result.contains(".gitignore"));
+        assert!(result.contains("README.md"));
+        assert!(result.contains("src/"));
+        assert!(result.contains("main.rs"));
+        assert!(!result.contains("tests/"));
+    }
+
+    #[test]
+    fn test_gitignore_rules() {
+        let (temp_dir, gitignore) = setup_test_dir();
+        let root = temp_dir.path();
+        let ignored_dirs = vec![];
+
+        let result = get_directory_structure(root, &gitignore, &ignored_dirs).unwrap();
+
+        // Verify that target/ directory is ignored due to .gitignore
+        assert!(!result.contains("target/"));
+    }
+
+    #[test]
+    fn test_empty_directory() {
+        let temp_dir = TempDir::new().unwrap();
+        let root = temp_dir.path();
+        let gitignore = Gitignore::empty();
+        let ignored_dirs = vec![];
+
+        let result = get_directory_structure(root, &gitignore, &ignored_dirs).unwrap();
+
+        assert!(result.contains("=== Project Directory Structure ==="));
+        assert!(result.contains("The directory is empty."));
+    }
+
+    #[test]
+    fn test_nested_directories() {
+        let temp_dir = TempDir::new().unwrap();
+        let root = temp_dir.path();
+
+        // Create nested directory structure
+        fs::create_dir_all(root.join("src/core/utils")).unwrap();
+        File::create(root.join("src/core/utils/helper.rs")).unwrap();
+
+        let gitignore = Gitignore::empty();
+        let ignored_dirs = vec![];
+
+        let result = get_directory_structure(root, &gitignore, &ignored_dirs).unwrap();
+
+        assert!(result.contains("=== Project Directory Structure ==="));
+        assert!(result.contains("src/"));
+        assert!(result.contains("core/"));
+        assert!(result.contains("utils/"));
+        assert!(result.contains("helper.rs"));
+    }
+
+    #[test]
+    fn test_non_existent_root() {
+        let root = Path::new("/non/existent/path");
+        let gitignore = Gitignore::empty();
+        let ignored_dirs = vec![];
+
+        let result = get_directory_structure(root, &gitignore, &ignored_dirs);
+        assert!(result.is_err());
     }
 
     #[test]

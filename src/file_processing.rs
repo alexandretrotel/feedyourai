@@ -45,6 +45,12 @@ pub fn get_directory_structure(
     let mut structure = String::new();
     structure.push_str("=== Project Directory Structure ===\n\n");
 
+    // Check if the root directory is empty
+    if root.read_dir()?.count() == 0 {
+        structure.push_str("The directory is empty.\n");
+        return Ok(structure);
+    }
+
     for entry in WalkDir::new(root).into_iter().filter_map(Result::ok) {
         let path = entry.path();
         if is_in_ignored_dir(path, ignored_dirs)
@@ -60,6 +66,7 @@ pub fn get_directory_structure(
             structure.push_str(&format!("{}{}{}\n", indent, name.to_string_lossy(), marker));
         }
     }
+
     structure.push_str("\n");
     Ok(structure)
 }
