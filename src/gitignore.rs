@@ -83,7 +83,7 @@ pub fn normalize_gitignore(gitignore_path: &Path, test_mode: bool) -> io::Result
 ///
 /// # Returns
 /// - `(Vec<String>, bool)`: A tuple containing the normalized lines and a boolean indicating if any changes were made.
-fn normalize_lines(existing_content: &str, test_mode: bool) -> (Vec<String>, bool) {
+pub fn normalize_lines(existing_content: &str, test_mode: bool) -> (Vec<String>, bool) {
     let mut normalized_lines = Vec::new();
     let mut lines_changed = false;
 

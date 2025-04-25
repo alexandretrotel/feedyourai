@@ -6,7 +6,7 @@ mod tests {
     };
     use tempfile::TempDir;
 
-    use crate::gitignore::{build_gitignore, normalize_gitignore};
+    use crate::gitignore::{build_gitignore, normalize_gitignore, normalize_lines};
 
     #[test]
     fn test_build_gitignore_new_file() -> io::Result<()> {
@@ -191,5 +191,108 @@ mod tests {
         assert!(result.is_err(), "Expected Err for read-only file");
 
         Ok(())
+    }
+
+    #[test]
+    fn test_empty_content() {
+        let input = "";
+        let (lines, changed) = normalize_lines(input, false);
+        assert_eq!(lines, Vec::<String>::new());
+        assert_eq!(changed, false);
+    }
+
+    #[test]
+    fn test_empty_line() {
+        let input = "\n";
+        let (lines, changed) = normalize_lines(input, false);
+        assert_eq!(lines, vec![""]);
+        assert_eq!(changed, false);
+    }
+
+    #[test]
+    fn test_comment_line() {
+        let input = "# This is a comment";
+        let (lines, changed) = normalize_lines(input, false);
+        assert_eq!(lines, vec!["# This is a comment"]);
+        assert_eq!(changed, false);
+    }
+
+    #[test]
+    fn test_negation_line() {
+        let input = "!important.txt";
+        let (lines, changed) = normalize_lines(input, false);
+        assert_eq!(lines, vec!["!important.txt"]);
+        assert_eq!(changed, false);
+    }
+
+    #[test]
+    fn test_directory_normalization() {
+        let input = "folder/";
+        let (lines, changed) = normalize_lines(input, false);
+        assert_eq!(lines, vec!["folder/**"]);
+        assert_eq!(changed, true);
+    }
+
+    #[test]
+    fn test_directory_already_normalized() {
+        let input = "folder/**";
+        let (lines, changed) = normalize_lines(input, false);
+        assert_eq!(lines, vec!["folder/**"]);
+        assert_eq!(changed, false);
+    }
+
+    #[test]
+    fn test_file_pattern_unchanged() {
+        let input = "*.log";
+        let (lines, changed) = normalize_lines(input, false);
+        assert_eq!(lines, vec!["*.log"]);
+        assert_eq!(changed, false);
+    }
+
+    #[test]
+    fn test_file_with_extension_unchanged() {
+        let input = "config.json";
+        let (lines, changed) = normalize_lines(input, false);
+        assert_eq!(lines, vec!["config.json"]);
+        assert_eq!(changed, false);
+    }
+
+    #[test]
+    fn test_mixed_content() {
+        let input = "# Comment\nfolder/\n*.log\n!important.txt\nanother_folder";
+        let expected = vec![
+            "# Comment",
+            "folder/**",
+            "*.log",
+            "!important.txt",
+            "another_folder/**",
+        ];
+        let (lines, changed) = normalize_lines(input, false);
+        assert_eq!(lines, expected);
+        assert_eq!(changed, true);
+    }
+
+    #[test]
+    fn test_trailing_slashes_and_wildcards() {
+        let input = "folder///";
+        let (lines, changed) = normalize_lines(input, false);
+        assert_eq!(lines, vec!["folder/**"]);
+        assert_eq!(changed, true);
+    }
+
+    #[test]
+    fn test_test_mode_no_output() {
+        let input = "folder/";
+        let (lines, changed) = normalize_lines(input, true);
+        assert_eq!(lines, vec!["folder/**"]);
+        assert_eq!(changed, true);
+    }
+
+    #[test]
+    fn test_line_with_spaces_unchanged() {
+        let input = "folder with spaces";
+        let (lines, changed) = normalize_lines(input, false);
+        assert_eq!(lines, vec!["folder with spaces"]);
+        assert_eq!(changed, false);
     }
 }
