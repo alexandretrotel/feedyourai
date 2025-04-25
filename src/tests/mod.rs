@@ -9,3 +9,5 @@ mod clipboard_tests;
 mod file_processing_tests;
 #[cfg(test)]
 mod gitignore_tests;
+#[cfg(test)]
+mod main_tests;
