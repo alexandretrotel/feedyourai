@@ -1,10 +1,9 @@
+use crate::cli::Config;
 use ignore::gitignore::Gitignore;
 use std::fs::{self, File};
 use std::io::{self, Read, Write};
 use std::path::Path;
 use walkdir::WalkDir;
-
-use crate::cli::Config;
 
 /// Checks if a path is within an ignored directory.
 ///
@@ -18,7 +17,12 @@ pub fn is_in_ignored_dir(path: &Path, ignored_dirs: &[&str]) -> bool {
     path.components().any(|comp| {
         comp.as_os_str()
             .to_str()
-            .map(|name| ignored_dirs.contains(&name))
+            .map(|name| {
+                let name_lower = name.to_lowercase();
+                ignored_dirs
+                    .iter()
+                    .any(|&ignored| ignored.eq_ignore_ascii_case(&name_lower))
+            })
             .unwrap_or(false)
     })
 }

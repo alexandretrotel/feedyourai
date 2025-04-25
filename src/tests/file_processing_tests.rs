@@ -6,7 +6,7 @@ mod tests {
     use ignore::gitignore::Gitignore;
     use std::fs;
     use std::io::{self, Write};
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
 
     fn create_gitignore_empty() -> Gitignore {
         Gitignore::empty()
@@ -20,6 +20,55 @@ mod tests {
 
         let path = PathBuf::from("src/test.txt");
         assert!(!is_in_ignored_dir(&path, &ignored_dirs));
+    }
+
+    #[test]
+    fn test_path_not_in_ignored_dir() {
+        let path = Path::new("/home/user/project/src/main.rs");
+        let ignored_dirs = vec![".git", "node_modules"];
+        assert!(!is_in_ignored_dir(path, &ignored_dirs));
+    }
+
+    #[test]
+    fn test_empty_ignored_dirs() {
+        let path = Path::new("/home/user/.git/config");
+        let ignored_dirs: Vec<&str> = vec![];
+        assert!(!is_in_ignored_dir(path, &ignored_dirs));
+    }
+
+    #[test]
+    fn test_root_path() {
+        let path = Path::new("/");
+        let ignored_dirs = vec![".git", "node_modules"];
+        assert!(!is_in_ignored_dir(path, &ignored_dirs));
+    }
+
+    #[test]
+    fn test_single_component_path() {
+        let path = Path::new(".git");
+        let ignored_dirs = vec![".git", "node_modules"];
+        assert!(is_in_ignored_dir(path, &ignored_dirs));
+    }
+
+    #[test]
+    fn test_path_with_similar_prefix() {
+        let path = Path::new("/home/user/gitlab/project");
+        let ignored_dirs = vec![".git", "node_modules"];
+        assert!(!is_in_ignored_dir(path, &ignored_dirs));
+    }
+
+    #[test]
+    fn test_case_sensitivity() {
+        let path = Path::new("/home/user/NODE_MODULES/cache");
+        let ignored_dirs = vec!["node_modules"];
+        assert!(is_in_ignored_dir(path, &ignored_dirs));
+    }
+
+    #[test]
+    fn test_empty_path() {
+        let path = Path::new("");
+        let ignored_dirs = vec![".git", "node_modules"];
+        assert!(!is_in_ignored_dir(path, &ignored_dirs));
     }
 
     #[test]
