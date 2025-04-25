@@ -50,7 +50,7 @@ pub fn parse_args() -> io::Result<Config> {
                 .short('n')
                 .long("min-size")
                 .value_name("BYTES")
-                .help("Exclude files smaller than this size in bytes")
+                .help("Exclude files smaller than this size in bytes"),
         )
         .arg(
             Arg::new("max_size")
