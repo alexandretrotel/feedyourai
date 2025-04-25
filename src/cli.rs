@@ -74,7 +74,7 @@ pub fn parse_args() -> io::Result<Config> {
 /// - `Command`: A `clap::Command` instance configured with the application's options.
 pub fn create_commands() -> Command {
     Command::new("FeedYourAI")
-        .version("1.3.1")
+        .version("1.3.2")
         .about("A tool to combine text files for AI processing with filtering options.")
         .arg(
             Arg::new("directory")
