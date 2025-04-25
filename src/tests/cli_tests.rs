@@ -1,123 +1,107 @@
 #[cfg(test)]
 mod tests {
-    use crate::cli::Config;
-    use std::io;
     use std::path::PathBuf;
 
-    // Simulate CLI arguments for testing
-    fn simulate_args(args: &[&str]) -> io::Result<Config> {
-        let matches = clap::Command::new("FeedYourAI")
-            .version("1.3.1")
-            .arg(
-                clap::Arg::new("directory")
-                    .short('d')
-                    .long("dir")
-                    .value_name("DIR")
-                    .default_value("."),
-            )
-            .arg(
-                clap::Arg::new("output")
-                    .short('o')
-                    .long("output")
-                    .value_name("FILE")
-                    .default_value("feedyourai.txt"),
-            )
-            .arg(
-                clap::Arg::new("extensions")
-                    .short('e')
-                    .long("ext")
-                    .value_name("EXT"),
-            )
-            .arg(
-                clap::Arg::new("min_size")
-                    .short('n')
-                    .long("min-size")
-                    .value_name("BYTES")
-                    .default_value("51200"),
-            )
-            .arg(
-                clap::Arg::new("max_size")
-                    .short('m')
-                    .long("max-size")
-                    .value_name("BYTES"),
-            )
-            .arg(
-                clap::Arg::new("test")
-                    .short('t')
-                    .long("test")
-                    .action(clap::ArgAction::SetTrue),
-            )
-            .try_get_matches_from(args)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e.to_string()))?;
-
-        Ok(Config {
-            directory: matches.get_one::<String>("directory").unwrap().into(),
-            output: matches.get_one::<String>("output").unwrap().into(),
-            extensions: matches.get_one::<String>("extensions").and_then(|ext| {
-                if ext.is_empty() {
-                    Some(vec![])
-                } else {
-                    Some(
-                        ext.split(',')
-                            .map(|s| s.trim().to_lowercase())
-                            .collect::<Vec<_>>(),
-                    )
-                }
-            }),
-            min_size: matches
-                .get_one::<String>("min_size")
-                .and_then(|s| s.parse().ok()),
-            max_size: matches
-                .get_one::<String>("max_size")
-                .and_then(|s| s.parse().ok()),
-            test_mode: matches.get_flag("test"),
-        })
-    }
+    use crate::cli::{config_from_matches, create_commands};
 
     #[test]
-    fn test_default_args() -> io::Result<()> {
-        let config = simulate_args(&["fyai"])?;
+    fn test_default_config() {
+        let args = create_commands().get_matches_from(vec!["feedyourai"]);
+        let config = config_from_matches(args).unwrap();
+
         assert_eq!(config.directory, PathBuf::from("."));
         assert_eq!(config.output, PathBuf::from("feedyourai.txt"));
-        assert_eq!(config.min_size, Some(51200));
-        assert_eq!(config.max_size, None);
         assert_eq!(config.extensions, None);
+        assert_eq!(config.min_size, None);
+        assert_eq!(config.max_size, None);
         assert_eq!(config.test_mode, false);
-        Ok(())
     }
 
     #[test]
-    fn test_custom_args() -> io::Result<()> {
-        let config = simulate_args(&[
-            "fyai",
-            "-d",
+    fn test_custom_directory_and_output() {
+        let args = create_commands().get_matches_from(vec![
+            "feedyourai",
+            "--dir",
             "/path/to/dir",
-            "-o",
-            "output.txt",
-            "-e",
-            "txt,md",
-            "-n",
-            "1000",
-            "-m",
-            "100000",
-            "-t",
-        ])?;
+            "--output",
+            "custom.txt",
+        ]);
+        let config = config_from_matches(args).unwrap();
+
         assert_eq!(config.directory, PathBuf::from("/path/to/dir"));
-        assert_eq!(config.output, PathBuf::from("output.txt"));
+        assert_eq!(config.output, PathBuf::from("custom.txt"));
+        assert_eq!(config.extensions, None);
+        assert_eq!(config.min_size, None);
+        assert_eq!(config.max_size, None);
+        assert_eq!(config.test_mode, false);
+    }
+
+    #[test]
+    fn test_extensions_parsing() {
+        let args = create_commands().get_matches_from(vec!["feedyourai", "--ext", "txt, md, pdf"]);
+        let config = config_from_matches(args).unwrap();
+
         assert_eq!(
             config.extensions,
-            Some(vec!["txt".to_string(), "md".to_string()])
+            Some(vec!["txt".to_string(), "md".to_string(), "pdf".to_string()])
         );
-        assert_eq!(config.min_size, Some(1000));
-        assert_eq!(config.max_size, Some(100000));
-        assert_eq!(config.test_mode, true);
-        Ok(())
     }
 
     #[test]
-    fn test_empty_extensions() -> io::Result<()> {
-        let config = simulate_args(&["fyai", "-e", ""])?;
-        assert_eq!(config.extensions, Some(vec![]));
-        Ok(())
+    fn test_size_filters() {
+        let args = create_commands().get_matches_from(vec![
+            "feedyourai",
+            "--min-size",
+            "1000",
+            "--max-size",
+            "5000",
+        ]);
+        let config = config_from_matches(args).unwrap();
+
+        assert_eq!(config.min_size, Some(1000));
+        assert_eq!(config.max_size, Some(5000));
+    }
+
+    #[test]
+    fn test_invalid_min_size() {
+        let args = create_commands().get_matches_from(vec!["feedyourai", "--min-size", "invalid"]);
+        let result = config_from_matches(args);
+
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Invalid value for min_size"
+        );
+    }
+
+    #[test]
+    fn test_invalid_max_size() {
+        let args = create_commands().get_matches_from(vec!["feedyourai", "--max-size", "invalid"]);
+        let result = config_from_matches(args);
+
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Invalid value for max_size"
+        );
+    }
+
+    #[test]
+    fn test_test_mode() {
+        let args = create_commands().get_matches_from(vec!["feedyourai", "--test"]);
+        let config = config_from_matches(args).unwrap();
+
+        assert_eq!(config.test_mode, true);
+    }
+
+    #[test]
+    fn test_extensions_with_empty_and_spaces() {
+        let args = create_commands().get_matches_from(vec!["feedyourai", "--ext", "txt,, md ,pdf"]);
+        let config = config_from_matches(args).unwrap();
+
+        assert_eq!(
+            config.extensions,
+            Some(vec!["txt".to_string(), "md".to_string(), "pdf".to_string()])
+        );
     }
 }
