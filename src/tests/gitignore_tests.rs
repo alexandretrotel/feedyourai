@@ -3,6 +3,7 @@ mod tests {
     use std::{
         fs::{self, File},
         io::{self, Write},
+        path::Path,
     };
     use tempfile::TempDir;
 
@@ -310,5 +311,41 @@ mod tests {
 
         let content = read_file_content(&gitignore_path);
         assert_eq!(content, "file1.txt\nfile2.txt\ndir1/**\ndir2/**\n");
+    }
+
+    #[test]
+    fn test_append_to_existing_gitignore() {
+        let (_temp_dir, gitignore_path) = setup_gitignore("existing.txt\n");
+        let files = &["file1.txt"];
+        let dirs = &["dir1"];
+
+        let result = append_ignored_items(&gitignore_path, files, dirs, false);
+        assert!(result.is_ok());
+
+        let content = read_file_content(&gitignore_path);
+        assert_eq!(content, "existing.txt\n\nfile1.txt\ndir1/**\n");
+    }
+
+    #[test]
+    fn test_empty_input() {
+        let (_temp_dir, gitignore_path) = setup_gitignore("existing.txt\n");
+        let files: &[&str] = &[];
+        let dirs: &[&str] = &[];
+
+        let result = append_ignored_items(&gitignore_path, files, dirs, false);
+        assert!(result.is_ok());
+
+        let content = read_file_content(&gitignore_path);
+        assert_eq!(content, "existing.txt\n\n");
+    }
+
+    #[test]
+    fn test_invalid_path() {
+        let invalid_path = Path::new("/invalid/path/.gitignore");
+        let files = &["file1.txt"];
+        let dirs = &["dir1/"];
+
+        let result = append_ignored_items(invalid_path, files, dirs, false);
+        assert!(result.is_err());
     }
 }
