@@ -3,7 +3,7 @@ use std::io;
 use std::path::PathBuf;
 
 /// Configuration derived from command-line arguments.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Config {
     pub directory: PathBuf,
     pub output: PathBuf,
