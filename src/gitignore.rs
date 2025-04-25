@@ -176,7 +176,7 @@ pub fn append_ignored_items(
 /// # Returns
 /// - `Ok(())`: If the appending is successful.
 /// - `Err(io::Error)`: If an error occurs while writing to the file.
-fn append_files(
+pub fn append_files(
     file: &mut fs::File,
     existing_content: &str,
     ignored_files: &[&str],
@@ -208,7 +208,7 @@ fn append_files(
 /// # Returns
 /// - `Ok(())`: If the appending is successful.
 /// - `Err(io::Error)`: If an error occurs while writing to the file.
-fn append_directories(
+pub fn append_directories(
     file: &mut fs::File,
     existing_content: &str,
     ignored_dirs: &[&str],

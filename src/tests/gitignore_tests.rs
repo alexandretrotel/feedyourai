@@ -2,13 +2,16 @@
 mod tests {
     use std::{
         fs::{self, File},
-        io::{self, Write},
+        io::{self, Read, Write},
         path::Path,
     };
-    use tempfile::TempDir;
+    use tempfile::{NamedTempFile, TempDir, tempdir};
 
     use crate::{
-        gitignore::{append_ignored_items, build_gitignore, normalize_gitignore, normalize_lines},
+        gitignore::{
+            append_directories, append_files, append_ignored_items, build_gitignore,
+            normalize_gitignore, normalize_lines,
+        },
         tests::common::{read_file_content, setup_gitignore},
     };
 
@@ -347,5 +350,115 @@ mod tests {
 
         let result = append_ignored_items(invalid_path, files, dirs, false);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_append_new_files() -> io::Result<()> {
+        let dir = tempdir()?;
+        let file_path = dir.path().join(".gitignore");
+        let mut file = File::create(&file_path)?;
+        let ignored_files = vec!["node_modules", ".env"];
+        let existing_content = "";
+
+        append_files(&mut file, existing_content, &ignored_files, false)?;
+
+        let content = read_file_content(&file_path);
+        assert_eq!(content, "node_modules\n.env\n");
+        Ok(())
+    }
+
+    #[test]
+    fn test_skip_existing_files() -> io::Result<()> {
+        let dir = tempdir()?;
+        let file_path = dir.path().join(".gitignore");
+        let mut file = File::create(&file_path)?;
+        let initial_content = "node_modules\n";
+        write!(file, "{}", initial_content)?;
+        file.sync_all()?;
+
+        let ignored_files = vec!["node_modules", ".env"];
+        let mut file = File::open(&file_path)?;
+        let mut existing_content = String::new();
+        file.read_to_string(&mut existing_content)?;
+        let mut file = File::create(&file_path)?;
+
+        append_files(&mut file, &existing_content, &ignored_files, false)?;
+
+        let content = read_file_content(&file_path);
+        assert_eq!(content, ".env\n");
+        Ok(())
+    }
+
+    #[test]
+    fn test_empty_ignored_files() -> io::Result<()> {
+        let dir = tempdir()?;
+        let file_path = dir.path().join(".gitignore");
+        let mut file = File::create(&file_path)?;
+        let ignored_files: Vec<&str> = vec![];
+        let existing_content = "node_modules\n";
+
+        append_files(&mut file, &existing_content, &ignored_files, false)?;
+
+        let content = read_file_content(&file_path);
+        assert_eq!(content, "");
+        Ok(())
+    }
+
+    #[test]
+    fn test_append_new_directories() -> io::Result<()> {
+        let mut temp_file = NamedTempFile::new()?;
+        let existing_content = "";
+        let ignored_dirs = vec!["node_modules", "dist"];
+        let test_mode = false;
+
+        append_directories(
+            temp_file.as_file_mut(),
+            existing_content,
+            &ignored_dirs,
+            test_mode,
+        )?;
+        let content = read_file_content(temp_file.path());
+
+        assert_eq!(content, "node_modules/**\ndist/**\n");
+        Ok(())
+    }
+
+    #[test]
+    fn test_skip_existing_directories() -> io::Result<()> {
+        let mut temp_file = NamedTempFile::new()?;
+        let existing_content = "node_modules/**";
+        writeln!(temp_file.as_file_mut(), "{}", existing_content)?;
+        let ignored_dirs = vec!["node_modules", "dist"];
+        let test_mode = false;
+
+        append_directories(
+            temp_file.as_file_mut(),
+            existing_content,
+            &ignored_dirs,
+            test_mode,
+        )?;
+        let content = read_file_content(temp_file.path());
+
+        assert_eq!(content, "node_modules/**\ndist/**\n");
+        Ok(())
+    }
+
+    #[test]
+    fn test_empty_directories_list() -> io::Result<()> {
+        let mut temp_file = NamedTempFile::new()?;
+        let existing_content = "";
+        let ignored_dirs: Vec<&str> = vec![];
+        let test_mode = false;
+
+        append_directories(
+            temp_file.as_file_mut(),
+            existing_content,
+            &ignored_dirs,
+            test_mode,
+        )?;
+        let content = read_file_content(temp_file.path());
+
+        assert_eq!(content, "");
+        Ok(())
     }
 }
