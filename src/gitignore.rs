@@ -4,7 +4,7 @@ use std::io::{self, Error, ErrorKind, Write};
 use std::path::Path;
 
 /// Builds a `Gitignore` instance from the specified directory and `.gitignore` file,
-/// appending default ignored files and directories to `.gitignore` line by line if they don't already exist,
+/// appending default ignored files and directories to `.gitignore` if they don't exist,
 /// and normalizes existing directory entries to `folder/**`.
 ///
 /// # Arguments
@@ -15,7 +15,6 @@ use std::path::Path;
 /// - `Ok(Gitignore)`: The constructed `Gitignore` instance.
 /// - `Err(io::Error)`: If an error occurs while building the gitignore or writing to the file.
 pub fn build_gitignore(dir_path: &Path, test_mode: bool) -> io::Result<Gitignore> {
-    let mut gitignore_builder = GitignoreBuilder::new(dir_path);
     let ignored_files = [
         "bun.lock",
         "package-lock.json",
@@ -25,90 +24,120 @@ pub fn build_gitignore(dir_path: &Path, test_mode: bool) -> io::Result<Gitignore
         ".DS_Store",
         "uv.lock",
     ];
-    let ignored_dirs = ["node_modules", "target", "dist", "build"]; // Without trailing slashes
-
+    let ignored_dirs = ["node_modules", "target", "dist", "build"];
     let gitignore_path = dir_path.join(".gitignore");
 
-    // Read existing .gitignore content, if it exists
-    let existing_content = if gitignore_path.exists() {
-        fs::read_to_string(&gitignore_path)?
-    } else {
-        String::new()
-    };
+    let mut gitignore_builder = GitignoreBuilder::new(dir_path);
 
-    // Normalize existing directory entries in .gitignore
-    let mut normalized_lines = Vec::new();
-    let mut lines_changed = false;
-    for line in existing_content.lines() {
-        let original_line = line.to_string();
-        let trimmed = line.trim();
+    // Normalize existing .gitignore content
+    normalize_gitignore(&gitignore_path, test_mode)?;
 
-        // Preserve empty lines and comments
-        if trimmed.is_empty() || trimmed.starts_with('#') {
-            normalized_lines.push(original_line);
-            continue;
-        }
+    // Append new ignored items
+    append_ignored_items(&gitignore_path, &ignored_files, &ignored_dirs, test_mode)?;
 
-        // Skip negated patterns (starting with !)
-        if trimmed.starts_with('!') {
-            normalized_lines.push(original_line);
-            continue;
-        }
+    // Load .gitignore into builder
+    load_gitignore(&mut gitignore_builder, &gitignore_path, test_mode)?;
 
-        // Handle directory-like entries
-        let mut normalized_line = original_line.clone();
-        // Remove trailing slashes, /**, or inline comments for comparison
-        let clean_line = trimmed
-            .trim_end_matches('/')
-            .trim_end_matches("/**")
-            .trim_end();
+    gitignore_builder
+        .build()
+        .map_err(|e| Error::new(ErrorKind::Other, e))
+}
 
-        // Check if the line looks like a directory (no extension, not a file pattern)
-        if !clean_line.contains('*') && !clean_line.contains('.') && !clean_line.contains(' ') {
-            let dir_wildcard = format!("{}/**", clean_line);
-            if trimmed != dir_wildcard {
-                normalized_line = dir_wildcard.clone();
-                lines_changed = true;
-                if test_mode {
-                    println!(
-                        "Normalized directory '{}' to '{}' in .gitignore",
-                        trimmed, normalized_line
-                    );
-                }
-            }
-        }
-
-        normalized_lines.push(normalized_line);
+/// Normalizes directory entries in .gitignore to `folder/**` format.
+fn normalize_gitignore(gitignore_path: &Path, test_mode: bool) -> io::Result<()> {
+    if !gitignore_path.exists() {
+        return Ok(());
     }
 
-    // Write normalized content back to .gitignore if changes were made
+    let existing_content = fs::read_to_string(gitignore_path)?;
+    let (normalized_lines, lines_changed) = normalize_lines(&existing_content, test_mode);
+
     if lines_changed {
-        fs::write(&gitignore_path, normalized_lines.join("\n") + "\n")?;
+        fs::write(gitignore_path, normalized_lines.join("\n") + "\n")?;
         if test_mode {
             println!("Updated .gitignore with normalized directory entries");
         }
     }
 
-    // Re-read the content after normalization
+    Ok(())
+}
+
+/// Normalizes lines in .gitignore content, converting directory entries to `folder/**`.
+fn normalize_lines(existing_content: &str, test_mode: bool) -> (Vec<String>, bool) {
+    let mut normalized_lines = Vec::new();
+    let mut lines_changed = false;
+
+    for line in existing_content.lines() {
+        let original_line = line.to_string();
+        let trimmed = line.trim();
+
+        if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with('!') {
+            normalized_lines.push(original_line);
+            continue;
+        }
+
+        let clean_line = trimmed
+            .trim_end_matches('/')
+            .trim_end_matches("/**")
+            .trim_end();
+
+        if !clean_line.contains('*') && !clean_line.contains('.') && !clean_line.contains(' ') {
+            let dir_wildcard = format!("{}/**", clean_line);
+            if trimmed != dir_wildcard {
+                normalized_lines.push(dir_wildcard.clone());
+                lines_changed = true;
+                if test_mode {
+                    println!(
+                        "Normalized directory '{}' to '{}' in .gitignore",
+                        trimmed, dir_wildcard
+                    );
+                }
+                continue;
+            }
+        }
+
+        normalized_lines.push(original_line);
+    }
+
+    (normalized_lines, lines_changed)
+}
+
+/// Appends ignored files and directories to .gitignore if they don't exist.
+fn append_ignored_items(
+    gitignore_path: &Path,
+    ignored_files: &[&str],
+    ignored_dirs: &[&str],
+    test_mode: bool,
+) -> io::Result<()> {
     let existing_content = if gitignore_path.exists() {
-        fs::read_to_string(&gitignore_path)?
+        fs::read_to_string(gitignore_path)?
     } else {
         String::new()
     };
 
-    // Open .gitignore in append mode (creates it if it doesn't exist)
     let mut file = OpenOptions::new()
         .write(true)
         .append(true)
         .create(true)
-        .open(&gitignore_path)?;
+        .open(gitignore_path)?;
 
-    // Write a newline if the file is not empty
     if !existing_content.is_empty() {
         writeln!(file)?;
     }
 
-    // Add each ignored file to .gitignore if it's not already present
+    append_files(&mut file, &existing_content, ignored_files, test_mode)?;
+    append_directories(&mut file, &existing_content, ignored_dirs, test_mode)?;
+
+    file.flush()
+}
+
+/// Appends ignored files to .gitignore.
+fn append_files(
+    file: &mut fs::File,
+    existing_content: &str,
+    ignored_files: &[&str],
+    test_mode: bool,
+) -> io::Result<()> {
     for ignored in ignored_files {
         if !existing_content.contains(ignored) {
             writeln!(file, "{}", ignored)?;
@@ -119,8 +148,16 @@ pub fn build_gitignore(dir_path: &Path, test_mode: bool) -> io::Result<Gitignore
             println!("Skipped file {} (already in .gitignore)", ignored);
         }
     }
+    Ok(())
+}
 
-    // Add each ignored directory to .gitignore if it's not already present, normalized to `folder/**`
+/// Appends ignored directories to .gitignore in `folder/**` format.
+fn append_directories(
+    file: &mut fs::File,
+    existing_content: &str,
+    ignored_dirs: &[&str],
+    test_mode: bool,
+) -> io::Result<()> {
     for ignored in ignored_dirs {
         let normalized_dir = format!("{}/**", ignored);
         if !existing_content.contains(&normalized_dir) {
@@ -135,22 +172,23 @@ pub fn build_gitignore(dir_path: &Path, test_mode: bool) -> io::Result<Gitignore
             );
         }
     }
+    Ok(())
+}
 
-    // Ensure the file is flushed to disk
-    file.flush()?;
-
-    // Add the .gitignore file to the builder
+/// Loads .gitignore into the GitignoreBuilder.
+fn load_gitignore(
+    builder: &mut GitignoreBuilder,
+    gitignore_path: &Path,
+    test_mode: bool,
+) -> io::Result<()> {
     if gitignore_path.exists() {
-        gitignore_builder.add(&gitignore_path);
+        builder.add(gitignore_path);
         if test_mode {
             println!("Loaded .gitignore from: {:?}", gitignore_path);
-            if let Ok(contents) = fs::read_to_string(&gitignore_path) {
+            if let Ok(contents) = fs::read_to_string(gitignore_path) {
                 println!(".gitignore contents:\n{}", contents);
             }
         }
     }
-
-    gitignore_builder
-        .build()
-        .map_err(|e| Error::new(ErrorKind::Other, e))
+    Ok(())
 }
