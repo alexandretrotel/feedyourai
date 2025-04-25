@@ -54,7 +54,7 @@ pub fn build_gitignore(dir_path: &Path, test_mode: bool) -> io::Result<Gitignore
 /// # Returns
 /// - `Ok(())`: If the normalization is successful.
 /// - `Err(io::Error)`: If an error occurs while reading or writing the file.
-fn normalize_gitignore(gitignore_path: &Path, test_mode: bool) -> io::Result<()> {
+pub fn normalize_gitignore(gitignore_path: &Path, test_mode: bool) -> io::Result<()> {
     if !gitignore_path.exists() {
         return Ok(());
     }
