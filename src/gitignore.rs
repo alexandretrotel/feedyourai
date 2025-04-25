@@ -243,7 +243,7 @@ pub fn append_directories(
 /// # Returns
 /// - `Ok(())`: If the loading is successful.
 /// - `Err(io::Error)`: If an error occurs while reading the file.
-fn load_gitignore(
+pub fn load_gitignore(
     builder: &mut GitignoreBuilder,
     gitignore_path: &Path,
     test_mode: bool,

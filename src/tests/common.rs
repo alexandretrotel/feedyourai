@@ -47,3 +47,10 @@ pub fn setup_gitignore(content: &str) -> (TempDir, std::path::PathBuf) {
 pub fn read_file_content(path: &Path) -> String {
     fs::read_to_string(path).unwrap_or_default()
 }
+
+pub fn create_gitignore(temp_dir: &TempDir, content: &str) -> std::io::Result<()> {
+    let gitignore_path = temp_dir.path().join(".gitignore");
+    let mut file = File::create(&gitignore_path)?;
+    writeln!(file, "{}", content)?;
+    Ok(())
+}

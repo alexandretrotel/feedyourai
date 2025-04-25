@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use ignore::gitignore::GitignoreBuilder;
     use std::{
         fs::{self, File},
         io::{self, Read, Write},
@@ -10,9 +11,9 @@ mod tests {
     use crate::{
         gitignore::{
             append_directories, append_files, append_ignored_items, build_gitignore,
-            normalize_gitignore, normalize_lines,
+            load_gitignore, normalize_gitignore, normalize_lines,
         },
-        tests::common::{read_file_content, setup_gitignore},
+        tests::common::{create_gitignore, read_file_content, setup_gitignore},
     };
 
     #[test]
@@ -460,5 +461,47 @@ mod tests {
 
         assert_eq!(content, "");
         Ok(())
+    }
+
+    #[test]
+    fn test_load_gitignore_file_exists() {
+        let temp_dir = TempDir::new().unwrap();
+        let gitignore_content = "*.log\nnode_modules/";
+        create_gitignore(&temp_dir, gitignore_content).unwrap();
+        let gitignore_path = temp_dir.path().join(".gitignore");
+
+        let mut builder = GitignoreBuilder::new(temp_dir.path());
+
+        let result = load_gitignore(&mut builder, &gitignore_path, false);
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_load_gitignore_file_does_not_exist() {
+        let temp_dir = TempDir::new().unwrap();
+        let gitignore_path = temp_dir.path().join(".gitignore");
+
+        let mut builder = GitignoreBuilder::new(temp_dir.path());
+
+        let result = load_gitignore(&mut builder, &gitignore_path, false);
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_load_gitignore_invalid_file() {
+        let temp_dir = TempDir::new().unwrap();
+        let gitignore_path = temp_dir.path().join(".gitignore");
+        File::create(&gitignore_path).unwrap();
+        let mut perms = fs::metadata(&gitignore_path).unwrap().permissions();
+        perms.set_readonly(true);
+        fs::set_permissions(&gitignore_path, perms).unwrap();
+
+        let mut builder = GitignoreBuilder::new(temp_dir.path());
+
+        let result = load_gitignore(&mut builder, &gitignore_path, false);
+
+        assert!(result.is_ok());
     }
 }
