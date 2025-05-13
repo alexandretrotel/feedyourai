@@ -41,6 +41,7 @@ mod tests {
                 extensions: vec![].into(),
                 min_size: Some(0),
                 max_size: Some(1024),
+                exclude_dirs: None,
             }),
         };
 
@@ -66,8 +67,12 @@ mod tests {
                 "out",
                 "target",
             ];
-            let dir_structure =
-                get_directory_structure(&config.directory, &gitignore, &ignored_dirs)?;
+            let dir_structure = get_directory_structure(
+                &config.directory,
+                &gitignore,
+                &ignored_dirs,
+                &config.exclude_dirs,
+            )?;
             process_files(&config, &gitignore, &ignored_dirs, &dir_structure)?;
             copy_to_clipboard(&config.output)?;
             Ok(())

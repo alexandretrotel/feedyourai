@@ -5,15 +5,20 @@ use std::io::{self, Read, Write};
 use std::path::Path;
 use walkdir::WalkDir;
 
-/// Checks if a path is within an ignored directory.
+/// Checks if a path is within an ignored directory, including user-specified excluded directories.
 ///
 /// # Arguments
 /// - `path`: The path to check.
 /// - `ignored_dirs`: List of directory names to ignore.
+/// - `exclude_dirs`: Optional list of user-specified directories to exclude.
 ///
 /// # Returns
-/// - `bool`: `true` if the path is in an ignored directory, `false` otherwise.
-pub fn is_in_ignored_dir(path: &Path, ignored_dirs: &[&str]) -> bool {
+/// - `bool`: `true` if the path is in an ignored or excluded directory, `false` otherwise.
+pub fn is_in_ignored_dir(
+    path: &Path,
+    ignored_dirs: &[&str],
+    exclude_dirs: &Option<Vec<String>>,
+) -> bool {
     path.components().any(|comp| {
         comp.as_os_str()
             .to_str()
@@ -22,6 +27,9 @@ pub fn is_in_ignored_dir(path: &Path, ignored_dirs: &[&str]) -> bool {
                 ignored_dirs
                     .iter()
                     .any(|&ignored| ignored.eq_ignore_ascii_case(&name_lower))
+                    || exclude_dirs.as_ref().map_or(false, |dirs| {
+                        dirs.iter().any(|dir| dir.eq_ignore_ascii_case(&name_lower))
+                    })
             })
             .unwrap_or(false)
     })
@@ -33,6 +41,7 @@ pub fn is_in_ignored_dir(path: &Path, ignored_dirs: &[&str]) -> bool {
 /// - `root`: The root directory path.
 /// - `gitignore`: Gitignore rules to apply.
 /// - `ignored_dirs`: List of directories to ignore.
+/// - `exclude_dirs`: Optional list of user-specified directories to exclude.
 ///
 /// # Returns
 /// - `Ok(String)`: The formatted directory structure.
@@ -41,6 +50,7 @@ pub fn get_directory_structure(
     root: &Path,
     gitignore: &Gitignore,
     ignored_dirs: &[&str],
+    exclude_dirs: &Option<Vec<String>>,
 ) -> io::Result<String> {
     let mut structure = String::new();
     structure.push_str("=== Project Directory Structure ===\n\n");
@@ -53,7 +63,7 @@ pub fn get_directory_structure(
 
     for entry in WalkDir::new(root).into_iter().filter_map(Result::ok) {
         let path = entry.path();
-        if is_in_ignored_dir(path, ignored_dirs)
+        if is_in_ignored_dir(path, ignored_dirs, exclude_dirs)
             || gitignore.matched(path, path.is_dir()).is_ignore()
         {
             continue;
@@ -102,7 +112,7 @@ pub fn process_files(
             continue;
         }
 
-        if is_in_ignored_dir(path, ignored_dirs) {
+        if is_in_ignored_dir(path, ignored_dirs, &config.exclude_dirs) {
             continue;
         }
 

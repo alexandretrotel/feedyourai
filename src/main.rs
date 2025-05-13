@@ -39,9 +39,40 @@ fn main() -> io::Result<()> {
         ".turbo",
         "out",
         "target",
+        ".meteor",
+        ".local",
+        ".cache",
+        ".config",
+        ".trash",
+        "cargo-target",
+        ".mypy_cache",
+        ".pylint.d",
+        ".ropeproject",
+        ".ipynb_checkpoints",
+        ".parcel-cache",
+        "coverage",
+        "storybook-static",
+        "bin",
+        "pkg",
+        ".gradle",
+        ".settings",
+        ".classpath",
+        ".project",
+        ".docker",
+        ".husky",
+        ".circleci",
+        ".github",
+        ".vercel",
+        "k8s",
+        "helm",
     ];
 
-    let dir_structure = get_directory_structure(&config.directory, &gitignore, &ignored_dirs)?;
+    let dir_structure = get_directory_structure(
+        &config.directory,
+        &gitignore,
+        &ignored_dirs,
+        &config.exclude_dirs,
+    )?;
     process_files(&config, &gitignore, &ignored_dirs, &dir_structure)?;
     copy_to_clipboard(&config.output)?;
 

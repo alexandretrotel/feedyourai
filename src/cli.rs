@@ -10,6 +10,7 @@ pub struct Config {
     pub extensions: Option<Vec<String>>,
     pub min_size: Option<u64>,
     pub max_size: Option<u64>,
+    pub exclude_dirs: Option<Vec<String>>,
 }
 
 /// Creates a `Config` from parsed `clap` argument matches.
@@ -48,6 +49,12 @@ pub fn config_from_matches(matches: clap::ArgMatches) -> io::Result<Config> {
             })
         })
         .transpose()?;
+    let exclude_dirs = matches.get_one::<String>("exclude_dirs").map(|dirs| {
+        dirs.split(',')
+            .map(|s| s.trim().to_lowercase())
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<_>>()
+    });
 
     Ok(Config {
         directory,
@@ -55,6 +62,7 @@ pub fn config_from_matches(matches: clap::ArgMatches) -> io::Result<Config> {
         extensions,
         min_size,
         max_size,
+        exclude_dirs,
     })
 }
 
@@ -112,6 +120,13 @@ pub fn create_commands() -> Command {
                 .long("max-size")
                 .value_name("BYTES")
                 .help("Exclude files larger than this size in bytes"),
+        )
+        .arg(
+            Arg::new("exclude_dirs")
+                .short('x')
+                .long("exclude-dirs")
+                .value_name("DIRS")
+                .help("Comma-separated list of directories to exclude (e.g., node_modules,dist)"),
         )
         .arg(
             clap::Arg::new("test")

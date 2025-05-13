@@ -14,6 +14,7 @@ mod tests {
         assert_eq!(config.extensions, None);
         assert_eq!(config.min_size, None);
         assert_eq!(config.max_size, None);
+        assert_eq!(config.exclude_dirs, None); // Check default
     }
 
     #[test]
@@ -32,6 +33,7 @@ mod tests {
         assert_eq!(config.extensions, None);
         assert_eq!(config.min_size, None);
         assert_eq!(config.max_size, None);
+        assert_eq!(config.exclude_dirs, None);
     }
 
     #[test]
@@ -42,6 +44,37 @@ mod tests {
         assert_eq!(
             config.extensions,
             Some(vec!["txt".to_string(), "md".to_string(), "pdf".to_string()])
+        );
+    }
+
+    #[test]
+    fn test_exclude_dirs_parsing() {
+        let args =
+            create_commands().get_matches_from(vec!["feedyourai", "--exclude-dirs", "src,tests"]);
+        let config = config_from_matches(args).unwrap();
+
+        assert_eq!(
+            config.exclude_dirs,
+            Some(vec!["src".to_string(), "tests".to_string()])
+        );
+    }
+
+    #[test]
+    fn test_exclude_dirs_with_empty_and_spaces() {
+        let args = create_commands().get_matches_from(vec![
+            "feedyourai",
+            "--exclude-dirs",
+            "src,, tests ,docs",
+        ]);
+        let config = config_from_matches(args).unwrap();
+
+        assert_eq!(
+            config.exclude_dirs,
+            Some(vec![
+                "src".to_string(),
+                "tests".to_string(),
+                "docs".to_string()
+            ])
         );
     }
 
