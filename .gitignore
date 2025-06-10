@@ -4,23 +4,5 @@ target/**
 # FeedYourAI
 feedyourai.txt
 
-bun.lock
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-Cargo.lock
+# MacOS
 .DS_Store
-uv.lock
-node_modules/**
-dist/**
-build/**
-
-
-
-
-
-
-
-
-
-
