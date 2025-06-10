@@ -2,6 +2,8 @@
 mod tests {
     use tempfile::TempDir;
 
+    use crate::IGNORED_DIRS;
+    use crate::IGNORED_FILES;
     use crate::build_gitignore;
     use crate::copy_to_clipboard;
     use crate::get_directory_structure;
@@ -48,32 +50,15 @@ mod tests {
         // Simulate main's logic with the mock
         let result = mock_cli.parse_args().and_then(|config| {
             // Use real implementations for other dependencies or mock them similarly
-            let gitignore = build_gitignore(&config.directory)?;
-            let ignored_dirs = [
-                "node_modules",
-                ".git",
-                ".svn",
-                ".hg",
-                ".idea",
-                ".vscode",
-                "build",
-                "dist",
-                "src-tauri",
-                ".venv",
-                "__pycache__",
-                ".pytest_cache",
-                ".next",
-                ".turbo",
-                "out",
-                "target",
-            ];
+            let gitignore =
+                build_gitignore(&config.directory, &IGNORED_FILES, &IGNORED_DIRS, &None)?;
             let dir_structure = get_directory_structure(
                 &config.directory,
                 &gitignore,
-                &ignored_dirs,
+                &IGNORED_DIRS,
                 &config.exclude_dirs,
             )?;
-            process_files(&config, &gitignore, &ignored_dirs, &dir_structure)?;
+            process_files(&config, &gitignore, &dir_structure)?;
             copy_to_clipboard(&config.output)?;
             Ok(())
         });

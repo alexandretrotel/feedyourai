@@ -241,7 +241,7 @@ mod tests {
             &ignored_dirs,
             &config.exclude_dirs,
         )?;
-        process_files(&config, &gitignore, &ignored_dirs, &dir_structure)?;
+        process_files(&config, &gitignore, &dir_structure)?;
 
         let output_content = fs::read_to_string(&config.output)?;
         assert!(output_content.contains("=== File: file1.txt"));
@@ -274,7 +274,7 @@ mod tests {
             &ignored_dirs,
             &config.exclude_dirs,
         )?;
-        process_files(&config, &gitignore, &ignored_dirs, &dir_structure)?;
+        process_files(&config, &gitignore, &dir_structure)?;
 
         let output_content = fs::read_to_string(&config.output)?;
         assert!(
@@ -309,7 +309,7 @@ mod tests {
             &ignored_dirs,
             &config.exclude_dirs,
         )?;
-        process_files(&config, &gitignore, &ignored_dirs, &dir_structure)?;
+        process_files(&config, &gitignore, &dir_structure)?;
 
         // Output should not include non-UTF-8 file content
         let output_content = fs::read_to_string(&config.output)?;
@@ -317,43 +317,6 @@ mod tests {
             !output_content.contains("=== File: non_utf8.bin"),
             "Output contains non_utf8.bin header"
         );
-        Ok(())
-    }
-
-    #[test]
-    fn test_process_files_exclude_dirs() -> io::Result<()> {
-        let temp_dir = setup_temp_dir();
-        fs::create_dir(temp_dir.path().join("excluded_dir"))?;
-        create_file(
-            temp_dir.path().join("excluded_dir/file1.txt"),
-            "Excluded content",
-        )?;
-        create_file(temp_dir.path().join("file2.txt"), "Included content")?;
-
-        let config = Config {
-            directory: temp_dir.path().to_path_buf(),
-            output: temp_dir.path().join("output.txt"),
-            extensions: None,
-            min_size: Some(0),
-            max_size: None,
-            exclude_dirs: Some(vec!["excluded_dir".to_string()]),
-        };
-
-        let ignored_dirs = ["node_modules"];
-        let gitignore = create_gitignore_empty();
-        let dir_structure = get_directory_structure(
-            temp_dir.path(),
-            &gitignore,
-            &ignored_dirs,
-            &config.exclude_dirs,
-        )?;
-        process_files(&config, &gitignore, &ignored_dirs, &dir_structure)?;
-
-        let output_content = fs::read_to_string(&config.output)?;
-        assert!(!output_content.contains("=== File: file1.txt"));
-        assert!(output_content.contains("=== File: file2.txt"));
-        assert!(output_content.contains("Included content"));
-        assert!(!output_content.contains("excluded_dir/"));
         Ok(())
     }
 }

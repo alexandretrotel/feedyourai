@@ -95,7 +95,6 @@ pub fn get_directory_structure(
 pub fn process_files(
     config: &Config,
     gitignore: &Gitignore,
-    ignored_dirs: &[&str],
     dir_structure: &str,
 ) -> io::Result<()> {
     let mut output = File::create(&config.output)?;
@@ -112,17 +111,13 @@ pub fn process_files(
             continue;
         }
 
-        if is_in_ignored_dir(path, ignored_dirs, &config.exclude_dirs) {
-            continue;
-        }
-
         let is_dir = path.is_dir();
         if gitignore.matched(path, is_dir).is_ignore() {
             continue;
         }
 
         if is_dir {
-            continue;
+            continue; // Skip directories
         }
 
         let metadata = fs::metadata(path)?;
