@@ -96,6 +96,7 @@ pub fn process_files(
     config: &Config,
     gitignore: &Gitignore,
     dir_structure: &str,
+    ignored_dirs: &[&str],
 ) -> io::Result<()> {
     let mut output = File::create(&config.output)?;
     write!(output, "{}", dir_structure)?;
@@ -112,7 +113,10 @@ pub fn process_files(
         }
 
         let is_dir = path.is_dir();
-        if gitignore.matched(path, is_dir).is_ignore() {
+
+        if is_in_ignored_dir(path, ignored_dirs, &config.exclude_dirs)
+            || gitignore.matched(path, is_dir).is_ignore()
+        {
             continue;
         }
 

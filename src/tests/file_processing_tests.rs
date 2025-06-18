@@ -241,7 +241,7 @@ mod tests {
             &ignored_dirs,
             &config.exclude_dirs,
         )?;
-        process_files(&config, &gitignore, &dir_structure)?;
+        process_files(&config, &gitignore, &dir_structure, &ignored_dirs)?;
 
         let output_content = fs::read_to_string(&config.output)?;
         assert!(output_content.contains("=== File: file1.txt"));
@@ -274,7 +274,7 @@ mod tests {
             &ignored_dirs,
             &config.exclude_dirs,
         )?;
-        process_files(&config, &gitignore, &dir_structure)?;
+        process_files(&config, &gitignore, &dir_structure, &ignored_dirs)?;
 
         let output_content = fs::read_to_string(&config.output)?;
         assert!(
@@ -309,7 +309,7 @@ mod tests {
             &ignored_dirs,
             &config.exclude_dirs,
         )?;
-        process_files(&config, &gitignore, &dir_structure)?;
+        process_files(&config, &gitignore, &dir_structure, &ignored_dirs)?;
 
         // Output should not include non-UTF-8 file content
         let output_content = fs::read_to_string(&config.output)?;

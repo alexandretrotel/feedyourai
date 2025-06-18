@@ -58,7 +58,7 @@ mod tests {
                 &IGNORED_DIRS,
                 &config.exclude_dirs,
             )?;
-            process_files(&config, &gitignore, &dir_structure)?;
+            process_files(&config, &gitignore, &dir_structure, IGNORED_DIRS)?;
             copy_to_clipboard(&config.output)?;
             Ok(())
         });
