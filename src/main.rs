@@ -66,6 +66,9 @@ const IGNORED_DIRS: &[&str] = &[
     ".vercel",
     "k8s",
     "helm",
+    ".changeset",
+    ".cursor",
+    ".vite",
 ];
 
 /// Main entry point for FeedYourAI.
