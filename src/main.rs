@@ -13,6 +13,9 @@ mod clipboard;
 mod file_processing;
 mod gitignore;
 
+/// Files to ignore during directory scanning and processing.
+///
+/// These are typically lock files, system files, or files that don't need indexing.
 const IGNORED_FILES: &[&str] = &[
     "bun.lock",
     "package-lock.json",
@@ -23,6 +26,9 @@ const IGNORED_FILES: &[&str] = &[
     "uv.lock",
 ];
 
+/// Directories to ignore during directory scanning and processing.
+///
+/// Common build directories, VCS folders, caches, and IDE config folders.
 const IGNORED_DIRS: &[&str] = &[
     "node_modules",
     ".git",
@@ -71,14 +77,29 @@ const IGNORED_DIRS: &[&str] = &[
     ".vite",
 ];
 
-/// Main entry point for FeedYourAI.
-/// Orchestrates CLI parsing, file processing, and clipboard operations.
+/// Main entry point for FeedYourAI application.
 ///
-/// # Returns
-/// - `Ok(())`: On successful execution.
-/// - `Err(io::Error)`: If an error occurs during execution
+/// Orchestrates the workflow by:
+/// 1. Parsing CLI arguments to get user configuration.
+/// 2. Building `.gitignore` rules incorporating default and user-excluded files/dirs.
+/// 3. Recursively scanning the target directory respecting ignore rules.
+/// 4. Processing matched files according to config.
+/// 5. Copying the final combined output to the system clipboard.
+/// 6. Printing success messages.
+///
+/// # Errors
+/// Returns an [`io::Error`] if any filesystem or IO operation fails during the process.
+///
+/// # Examples
+/// ```no_run
+/// fn main() -> std::io::Result<()> {
+///     // Your application logic here
+///     Ok(())
+/// }
+/// ```
 fn main() -> io::Result<()> {
     let config = parse_args()?;
+
     let gitignore = build_gitignore(
         &config.directory,
         IGNORED_FILES,
@@ -92,7 +113,9 @@ fn main() -> io::Result<()> {
         &IGNORED_DIRS,
         &config.exclude_dirs,
     )?;
+
     process_files(&config, &gitignore, &dir_structure, IGNORED_DIRS)?;
+
     copy_to_clipboard(&config.output)?;
 
     println!(
@@ -100,5 +123,6 @@ fn main() -> io::Result<()> {
         config.output.display()
     );
     println!("Output copied to clipboard successfully!");
+
     Ok(())
 }
