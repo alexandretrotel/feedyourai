@@ -63,9 +63,8 @@ pub fn get_directory_structure(
 
     for entry in WalkDir::new(root).into_iter().filter_map(Result::ok) {
         let path = entry.path();
-        if is_in_ignored_dir(path, ignored_dirs, exclude_dirs)
-            || gitignore.matched(path, path.is_dir()).is_ignore()
-        {
+        let is_dir = path.is_dir();
+        if should_skip_path(path, is_dir, gitignore, ignored_dirs, exclude_dirs) {
             continue;
         }
 
@@ -114,9 +113,7 @@ pub fn process_files(
 
         let is_dir = path.is_dir();
 
-        if is_in_ignored_dir(path, ignored_dirs, &config.exclude_dirs)
-            || gitignore.matched(path, is_dir).is_ignore()
-        {
+        if should_skip_path(path, is_dir, gitignore, ignored_dirs, &config.exclude_dirs) {
             continue;
         }
 
@@ -168,4 +165,32 @@ pub fn process_files(
 
     output.flush()?;
     Ok(())
+}
+
+/// Determines if a path should be skipped during file processing.
+///
+/// This function checks if a path should be excluded from processing based on:
+/// 1. User-specified ignored directories (case-insensitive matching)
+/// 2. Custom exclude directories provided via CLI configuration
+/// 3. Gitignore rules that apply to the path
+///
+/// # Arguments
+/// - `path`: The file or directory path to evaluate
+/// - `is_dir`: Whether the path represents a directory (`true`) or file (`false`)
+/// - `gitignore`: Compiled gitignore rules to check against
+/// - `ignored_dirs`: Predefined list of directory names to ignore (e.g., "node_modules", ".git")
+/// - `exclude_dirs`: Optional user-specified directories to exclude from processing
+///
+/// # Returns
+/// - `true` if the path should be skipped (ignored)
+/// - `false` if the path should be processed
+pub fn should_skip_path(
+    path: &Path,
+    is_dir: bool,
+    gitignore: &Gitignore,
+    ignored_dirs: &[&str],
+    exclude_dirs: &Option<Vec<String>>,
+) -> bool {
+    is_in_ignored_dir(path, ignored_dirs, exclude_dirs)
+        || gitignore.matched(path, is_dir).is_ignore()
 }

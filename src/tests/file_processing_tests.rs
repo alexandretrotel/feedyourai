@@ -1,7 +1,9 @@
 #[cfg(test)]
 mod tests {
     use crate::cli::Config;
-    use crate::file_processing::{get_directory_structure, is_in_ignored_dir, process_files};
+    use crate::file_processing::{
+        get_directory_structure, is_in_ignored_dir, process_files, should_skip_path,
+    };
     use crate::tests::common::{create_file, setup_temp_dir, setup_test_dir};
     use ignore::gitignore::Gitignore;
     use std::fs;
@@ -318,5 +320,342 @@ mod tests {
             "Output contains non_utf8.bin header"
         );
         Ok(())
+    }
+
+    #[test]
+    fn test_should_skip_path_ignored_dirs() {
+        let gitignore = create_gitignore_empty();
+        let ignored_dirs = ["node_modules", ".git", "target"];
+        let exclude_dirs: Option<Vec<String>> = None;
+
+        // Test directory paths that should be skipped
+        let path = Path::new("project/node_modules");
+        assert!(should_skip_path(
+            path,
+            true,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+
+        let path = Path::new("project/.git/config");
+        assert!(should_skip_path(
+            path,
+            false,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+
+        let path = Path::new("rust_project/target/debug/main");
+        assert!(should_skip_path(
+            path,
+            false,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+
+        // Test paths that should not be skipped
+        let path = Path::new("project/src/main.rs");
+        assert!(!should_skip_path(
+            path,
+            false,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+
+        let path = Path::new("project/README.md");
+        assert!(!should_skip_path(
+            path,
+            false,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+    }
+
+    #[test]
+    fn test_should_skip_path_exclude_dirs() {
+        let gitignore = create_gitignore_empty();
+        let ignored_dirs: Vec<&str> = vec![];
+        let exclude_dirs = Some(vec!["tests".to_string(), "docs".to_string()]);
+
+        // Test directory paths that should be skipped due to exclude_dirs
+        let path = Path::new("project/tests/unit_test.rs");
+        assert!(should_skip_path(
+            path,
+            false,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+
+        let path = Path::new("project/docs/README.md");
+        assert!(should_skip_path(
+            path,
+            false,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+
+        // Test paths that should not be skipped
+        let path = Path::new("project/src/main.rs");
+        assert!(!should_skip_path(
+            path,
+            false,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+    }
+
+    #[test]
+    fn test_should_skip_path_case_insensitive() {
+        let gitignore = create_gitignore_empty();
+        let ignored_dirs = ["node_modules"];
+        let exclude_dirs = Some(vec!["Tests".to_string()]);
+
+        // Test case insensitive matching for ignored_dirs
+        let path = Path::new("project/NODE_MODULES/package");
+        assert!(should_skip_path(
+            path,
+            true,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+
+        let path = Path::new("project/Node_Modules/package");
+        assert!(should_skip_path(
+            path,
+            true,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+
+        // Test case insensitive matching for exclude_dirs
+        let path = Path::new("project/tests/unit.rs");
+        assert!(should_skip_path(
+            path,
+            false,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+
+        let path = Path::new("project/TESTS/integration.rs");
+        assert!(should_skip_path(
+            path,
+            false,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+    }
+
+    #[test]
+    fn test_should_skip_path_with_gitignore() -> io::Result<()> {
+        let temp_dir = setup_temp_dir();
+        let root = temp_dir.path();
+
+        // Create a .gitignore file with specific rules
+        let gitignore_content = "*.log\n/build/\ntmp/\n";
+        create_file(root.join(".gitignore"), gitignore_content)?;
+        let gitignore = Gitignore::new(root.join(".gitignore")).0;
+
+        let ignored_dirs: Vec<&str> = vec![];
+        let exclude_dirs: Option<Vec<String>> = None;
+
+        // Test files that should be skipped due to gitignore rules
+        let path = root.join("app.log");
+        assert!(should_skip_path(
+            &path,
+            false,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+
+        let path = root.join("build");
+        assert!(should_skip_path(
+            &path,
+            true,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+
+        let path = root.join("tmp");
+        assert!(should_skip_path(
+            &path,
+            true,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+
+        // Test files that should not be skipped
+        let path = root.join("src/main.rs");
+        assert!(!should_skip_path(
+            &path,
+            false,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+
+        let path = root.join("README.md");
+        assert!(!should_skip_path(
+            &path,
+            false,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_should_skip_path_combined_rules() -> io::Result<()> {
+        let temp_dir = setup_temp_dir();
+        let root = temp_dir.path();
+
+        // Create a .gitignore file
+        let gitignore_content = "*.tmp\n";
+        create_file(root.join(".gitignore"), gitignore_content)?;
+        let gitignore = Gitignore::new(root.join(".gitignore")).0;
+
+        let ignored_dirs = ["node_modules", ".git"];
+        let exclude_dirs = Some(vec!["tests".to_string()]);
+
+        // Test path that matches multiple rules (should be skipped)
+        let path = root.join("node_modules/package.tmp");
+        assert!(should_skip_path(
+            &path,
+            false,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+
+        // Test path that matches gitignore only
+        let path = root.join("src/cache.tmp");
+        assert!(should_skip_path(
+            &path,
+            false,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+
+        // Test path that matches ignored_dirs only
+        let path = root.join("node_modules/package.json");
+        assert!(should_skip_path(
+            &path,
+            false,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+
+        // Test path that matches exclude_dirs only
+        let path = root.join("tests/unit.rs");
+        assert!(should_skip_path(
+            &path,
+            false,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+
+        // Test path that doesn't match any rule
+        let path = root.join("src/main.rs");
+        assert!(!should_skip_path(
+            &path,
+            false,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_should_skip_path_empty_rules() {
+        let gitignore = create_gitignore_empty();
+        let ignored_dirs: Vec<&str> = vec![];
+        let exclude_dirs: Option<Vec<String>> = None;
+
+        // When no rules are defined, no paths should be skipped
+        let path = Path::new("any/path/file.txt");
+        assert!(!should_skip_path(
+            path,
+            false,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+
+        let path = Path::new(".git/config");
+        assert!(!should_skip_path(
+            path,
+            false,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+
+        let path = Path::new("node_modules/package.json");
+        assert!(!should_skip_path(
+            path,
+            false,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+    }
+
+    #[test]
+    fn test_should_skip_path_file_vs_directory() {
+        let gitignore = create_gitignore_empty();
+        let ignored_dirs = ["target"];
+        let exclude_dirs: Option<Vec<String>> = None;
+
+        // Test the same path as both file and directory
+        let path = Path::new("project/target");
+
+        // As a directory, it should be skipped
+        assert!(should_skip_path(
+            path,
+            true,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+
+        // As a file, it should also be skipped (because it's in the ignored directory)
+        assert!(should_skip_path(
+            path,
+            false,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
+
+        // Test a file inside the ignored directory
+        let path = Path::new("project/target/debug/main");
+        assert!(should_skip_path(
+            path,
+            false,
+            &gitignore,
+            &ignored_dirs,
+            &exclude_dirs
+        ));
     }
 }
