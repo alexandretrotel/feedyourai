@@ -114,15 +114,18 @@ fn main() -> io::Result<()> {
         &config.exclude_dirs,
     )?;
 
-    process_files(&config, &gitignore, &dir_structure, IGNORED_DIRS)?;
-
-    copy_to_clipboard(&config.output)?;
-
-    println!(
-        "Files combined successfully into {}",
-        config.output.display()
-    );
-    println!("Output copied to clipboard successfully!");
-
+    if config.tree_only {
+        // Only output the directory tree to the output file
+        std::fs::write(&config.output, &dir_structure)?;
+        println!("Project tree written to {}", config.output.display());
+    } else {
+        process_files(&config, &gitignore, &dir_structure, IGNORED_DIRS)?;
+        copy_to_clipboard(&config.output)?;
+        println!(
+            "Files combined successfully into {}",
+            config.output.display()
+        );
+        println!("Output copied to clipboard successfully!");
+    }
     Ok(())
 }

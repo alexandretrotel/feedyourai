@@ -51,11 +51,16 @@ USAGE:
 
 OPTIONS:
     -d, --dir <DIR>          Sets the input directory [default: .]
+    
     -o, --output <FILE>      Sets the output file [default: feedyourai.txt]
+
     -e, --ext <EXT>          Comma-separated list of file extensions to exclude (e.g., txt,md)
     -x, --exclude-dirs <DIRS> Comma-separated list of directories to exclude (e.g., src,tests)
     -n, --min-size <BYTES>   Exclude files smaller than this size in bytes (default: 51200)
     -m, --max-size <BYTES>   Exclude files larger than this size in bytes
+
+    --tree-only              Only output the project directory tree, no file contents
+
     -h, --help               Print help information
     -V, --version            Print version information
 ```
@@ -77,6 +82,11 @@ OPTIONS:
 - Custom output file with files between 10KB and 500KB, excluding `list` and `node_modules`:
   ```bash
   fyai -n 10240 -m 512000 -o ai_input.txt -x dist, node_modules
+  ```
+
+- Output only the project directory structure (no file contents):
+  ```bash
+  fyai --tree-only -o tree.txt
   ```
 
 ## Output Format

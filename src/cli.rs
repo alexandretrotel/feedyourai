@@ -11,6 +11,7 @@ pub struct Config {
     pub min_size: Option<u64>,
     pub max_size: Option<u64>,
     pub exclude_dirs: Option<Vec<String>>,
+    pub tree_only: bool,
 }
 
 /// Creates a `Config` from parsed `clap` argument matches.
@@ -55,6 +56,7 @@ pub fn config_from_matches(matches: clap::ArgMatches) -> io::Result<Config> {
             .filter(|s| !s.is_empty())
             .collect::<Vec<_>>()
     });
+    let tree_only = matches.get_flag("tree_only");
 
     Ok(Config {
         directory,
@@ -63,6 +65,7 @@ pub fn config_from_matches(matches: clap::ArgMatches) -> io::Result<Config> {
         min_size,
         max_size,
         exclude_dirs,
+        tree_only,
     })
 }
 
@@ -127,6 +130,12 @@ pub fn create_commands() -> Command {
                 .long("exclude-dirs")
                 .value_name("DIRS")
                 .help("Comma-separated list of directories to exclude (e.g., node_modules,dist)"),
+        )
+        .arg(
+            clap::Arg::new("tree_only")
+                .long("tree-only")
+                .action(clap::ArgAction::SetTrue)
+                .help("Only output the project directory tree, no file contents"),
         )
         .arg(
             clap::Arg::new("test")
