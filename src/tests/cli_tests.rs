@@ -6,11 +6,11 @@ mod tests {
 
     #[test]
     fn test_default_config() {
-        let args = create_commands().get_matches_from(vec!["feedyourai"]);
+        let args = create_commands().get_matches_from(vec!["fyai"]);
         let config = config_from_matches(args).unwrap();
 
         assert_eq!(config.directory, PathBuf::from("."));
-        assert_eq!(config.output, PathBuf::from("feedyourai.txt"));
+        assert_eq!(config.output, PathBuf::from("fyai.txt"));
         assert_eq!(config.extensions, None);
         assert_eq!(config.min_size, None);
         assert_eq!(config.max_size, None);
@@ -21,7 +21,7 @@ mod tests {
     #[test]
     fn test_custom_directory_and_output() {
         let args = create_commands().get_matches_from(vec![
-            "feedyourai",
+            "fyai",
             "--dir",
             "/path/to/dir",
             "--output",
@@ -40,7 +40,7 @@ mod tests {
 
     #[test]
     fn test_extensions_parsing() {
-        let args = create_commands().get_matches_from(vec!["feedyourai", "--ext", "txt, md, pdf"]);
+        let args = create_commands().get_matches_from(vec!["fyai", "--ext", "txt, md, pdf"]);
         let config = config_from_matches(args).unwrap();
 
         assert_eq!(
@@ -51,8 +51,7 @@ mod tests {
 
     #[test]
     fn test_exclude_dirs_parsing() {
-        let args =
-            create_commands().get_matches_from(vec!["feedyourai", "--exclude-dirs", "src,tests"]);
+        let args = create_commands().get_matches_from(vec!["fyai", "--exclude-dirs", "src,tests"]);
         let config = config_from_matches(args).unwrap();
 
         assert_eq!(
@@ -63,11 +62,8 @@ mod tests {
 
     #[test]
     fn test_exclude_dirs_with_empty_and_spaces() {
-        let args = create_commands().get_matches_from(vec![
-            "feedyourai",
-            "--exclude-dirs",
-            "src,, tests ,docs",
-        ]);
+        let args =
+            create_commands().get_matches_from(vec!["fyai", "--exclude-dirs", "src,, tests ,docs"]);
         let config = config_from_matches(args).unwrap();
 
         assert_eq!(
@@ -83,7 +79,7 @@ mod tests {
     #[test]
     fn test_size_filters() {
         let args = create_commands().get_matches_from(vec![
-            "feedyourai",
+            "fyai",
             "--min-size",
             "1000",
             "--max-size",
@@ -97,7 +93,7 @@ mod tests {
 
     #[test]
     fn test_invalid_min_size() {
-        let args = create_commands().get_matches_from(vec!["feedyourai", "--min-size", "invalid"]);
+        let args = create_commands().get_matches_from(vec!["fyai", "--min-size", "invalid"]);
         let result = config_from_matches(args);
 
         assert!(result.is_err());
@@ -109,7 +105,7 @@ mod tests {
 
     #[test]
     fn test_invalid_max_size() {
-        let args = create_commands().get_matches_from(vec!["feedyourai", "--max-size", "invalid"]);
+        let args = create_commands().get_matches_from(vec!["fyai", "--max-size", "invalid"]);
         let result = config_from_matches(args);
 
         assert!(result.is_err());
@@ -121,7 +117,7 @@ mod tests {
 
     #[test]
     fn test_extensions_with_empty_and_spaces() {
-        let args = create_commands().get_matches_from(vec!["feedyourai", "--ext", "txt,, md ,pdf"]);
+        let args = create_commands().get_matches_from(vec!["fyai", "--ext", "txt,, md ,pdf"]);
         let config = config_from_matches(args).unwrap();
 
         assert_eq!(
@@ -132,7 +128,7 @@ mod tests {
 
     #[test]
     fn test_tree_only_flag() {
-        let args = create_commands().get_matches_from(vec!["feedyourai", "--tree-only"]);
+        let args = create_commands().get_matches_from(vec!["fyai", "--tree-only"]);
         let config = config_from_matches(args).unwrap();
 
         assert_eq!(config.tree_only, true);

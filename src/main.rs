@@ -77,7 +77,7 @@ const IGNORED_DIRS: &[&str] = &[
     ".vite",
 ];
 
-/// Main entry point for FeedYourAI application.
+/// Main entry point for fyai application.
 ///
 /// Orchestrates the workflow by:
 /// 1. Parsing CLI arguments to get user configuration.

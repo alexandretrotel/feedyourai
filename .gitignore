@@ -1,8 +1,9 @@
 # Output files
 target/**
 
-# FeedYourAI
+# fyai
 feedyourai.txt
+fyai.txt
 
 # MacOS
 .DS_Store

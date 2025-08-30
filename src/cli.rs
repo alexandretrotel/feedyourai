@@ -101,7 +101,7 @@ pub fn create_commands() -> Command {
                 .long("output")
                 .value_name("FILE")
                 .help("Sets the output file")
-                .default_value("feedyourai.txt"),
+                .default_value("fyai.txt"),
         )
         .arg(
             Arg::new("extensions")
