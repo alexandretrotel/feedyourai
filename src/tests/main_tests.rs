@@ -44,6 +44,7 @@ mod tests {
                 min_size: Some(0),
                 max_size: Some(1024),
                 exclude_dirs: None,
+                tree_only: false,
             }),
         };
 

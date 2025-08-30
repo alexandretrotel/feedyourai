@@ -15,6 +15,7 @@ mod tests {
         assert_eq!(config.min_size, None);
         assert_eq!(config.max_size, None);
         assert_eq!(config.exclude_dirs, None); // Check default
+        assert_eq!(config.tree_only, false);
     }
 
     #[test]
@@ -34,6 +35,7 @@ mod tests {
         assert_eq!(config.min_size, None);
         assert_eq!(config.max_size, None);
         assert_eq!(config.exclude_dirs, None);
+        assert_eq!(config.tree_only, false);
     }
 
     #[test]
@@ -126,5 +128,13 @@ mod tests {
             config.extensions,
             Some(vec!["txt".to_string(), "md".to_string(), "pdf".to_string()])
         );
+    }
+
+    #[test]
+    fn test_tree_only_flag() {
+        let args = create_commands().get_matches_from(vec!["feedyourai", "--tree-only"]);
+        let config = config_from_matches(args).unwrap();
+
+        assert_eq!(config.tree_only, true);
     }
 }
