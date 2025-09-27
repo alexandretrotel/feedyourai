@@ -14,8 +14,6 @@ mod file_processing;
 mod gitignore;
 
 /// Files to ignore during directory scanning and processing.
-///
-/// These are typically lock files, system files, or files that don't need indexing.
 const IGNORED_FILES: &[&str] = &[
     "bun.lock",
     "package-lock.json",
@@ -27,8 +25,6 @@ const IGNORED_FILES: &[&str] = &[
 ];
 
 /// Directories to ignore during directory scanning and processing.
-///
-/// Common build directories, VCS folders, caches, and IDE config folders.
 const IGNORED_DIRS: &[&str] = &[
     "node_modules",
     ".git",
@@ -77,26 +73,6 @@ const IGNORED_DIRS: &[&str] = &[
     ".vite",
 ];
 
-/// Main entry point for fyai application.
-///
-/// Orchestrates the workflow by:
-/// 1. Parsing CLI arguments to get user configuration.
-/// 2. Building `.gitignore` rules incorporating default and user-excluded files/dirs.
-/// 3. Recursively scanning the target directory respecting ignore rules.
-/// 4. Processing matched files according to config.
-/// 5. Copying the final combined output to the system clipboard.
-/// 6. Printing success messages.
-///
-/// # Errors
-/// Returns an [`io::Error`] if any filesystem or IO operation fails during the process.
-///
-/// # Examples
-/// ```no_run
-/// fn main() -> std::io::Result<()> {
-///     // Your application logic here
-///     Ok(())
-/// }
-/// ```
 fn main() -> io::Result<()> {
     let config = parse_args()?;
 
@@ -115,7 +91,6 @@ fn main() -> io::Result<()> {
     )?;
 
     if config.tree_only {
-        // Only output the directory tree to the output file
         std::fs::write(&config.output, &dir_structure)?;
         println!("Project tree written to {}", config.output.display());
     } else {

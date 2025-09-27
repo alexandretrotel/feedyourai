@@ -4,13 +4,6 @@ use std::io::{self, Error, ErrorKind, Read};
 use std::path::Path;
 
 /// Copies the contents of the specified file to the system clipboard.
-///
-/// # Arguments
-/// - `output_path`: The path to the file whose contents should be copied.
-///
-/// # Returns
-/// - `Ok(())`: On successful copying.
-/// - `Err(io::Error)`: If an error occurs during file reading or clipboard access.
 pub fn copy_to_clipboard(output_path: &Path) -> io::Result<()> {
     let mut output_contents = String::new();
     File::open(output_path)?.read_to_string(&mut output_contents)?;

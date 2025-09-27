@@ -5,16 +5,6 @@ use std::path::Path;
 /// Builds a `Gitignore` instance from the specified directory and `.gitignore` file,
 /// appending default ignored files and directories to `.gitignore` if they don't exist,
 /// and normalizes existing directory entries to `folder/**`.
-///
-/// # Arguments
-/// - `dir_path`: The directory to search for or create `.gitignore`.
-/// - `ignored_files`: A slice of file names to ignore.
-/// - `ignored_dirs`: A slice of directory names to ignore.
-/// - `exclude_dirs`: An optional vector of user-specified directories to exclude from the gitignore.
-///
-/// # Returns
-/// - `Ok(Gitignore)`: The constructed `Gitignore` instance.
-/// - `Err(io::Error)`: If an error occurs while building the gitignore or writing to the file.
 pub fn build_gitignore(
     dir_path: &Path,
     ignored_files: &[&str],

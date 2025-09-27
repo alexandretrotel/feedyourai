@@ -2,7 +2,6 @@ use clap::{Arg, Command};
 use std::io;
 use std::path::PathBuf;
 
-/// Configuration derived from command-line arguments.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Config {
     pub directory: PathBuf,
@@ -14,11 +13,6 @@ pub struct Config {
     pub tree_only: bool,
 }
 
-/// Creates a `Config` from parsed `clap` argument matches.
-///
-/// # Returns
-/// - `Ok(Config)`: Parsed configuration.
-/// - `Err(io::Error)`: If parsing fails (e.g., invalid input).
 pub fn config_from_matches(matches: clap::ArgMatches) -> io::Result<Config> {
     let directory = matches
         .get_one::<String>("directory")
@@ -70,19 +64,11 @@ pub fn config_from_matches(matches: clap::ArgMatches) -> io::Result<Config> {
 }
 
 /// Parses command-line arguments and returns a `Config` struct.
-///
-/// # Returns
-/// - `Ok(Config)`: Parsed configuration.
-/// - `Err(io::Error)`: If parsing fails (e.g., invalid input).
 pub fn parse_args() -> io::Result<Config> {
     let matches = create_commands().get_matches();
     config_from_matches(matches)
 }
 
-/// Creates a `Command` instance for the CLI.
-///
-/// # Returns
-/// - `Command`: A `clap::Command` instance configured with the application's options.
 pub fn create_commands() -> Command {
     Command::new("fyai")
         .version(env!("CARGO_PKG_VERSION"))

@@ -6,14 +6,6 @@ use std::path::Path;
 use walkdir::WalkDir;
 
 /// Checks if a path is within an ignored directory, including user-specified excluded directories.
-///
-/// # Arguments
-/// - `path`: The path to check.
-/// - `ignored_dirs`: List of directory names to ignore.
-/// - `exclude_dirs`: Optional list of user-specified directories to exclude.
-///
-/// # Returns
-/// - `bool`: `true` if the path is in an ignored or excluded directory, `false` otherwise.
 pub fn is_in_ignored_dir(
     path: &Path,
     ignored_dirs: &[&str],
@@ -36,16 +28,6 @@ pub fn is_in_ignored_dir(
 }
 
 /// Generates a string representation of the project directory structure.
-///
-/// # Arguments
-/// - `root`: The root directory path.
-/// - `gitignore`: Gitignore rules to apply.
-/// - `ignored_dirs`: List of directories to ignore.
-/// - `exclude_dirs`: Optional list of user-specified directories to exclude.
-///
-/// # Returns
-/// - `Ok(String)`: The formatted directory structure.
-/// - `Err(io::Error)`: If an error occurs during traversal.
 pub fn get_directory_structure(
     root: &Path,
     gitignore: &Gitignore,
@@ -81,16 +63,6 @@ pub fn get_directory_structure(
 }
 
 /// Processes files in the input directory and combines them into the output file.
-///
-/// # Arguments
-/// - `config`: The CLI configuration.
-/// - `gitignore`: Gitignore rules to apply.
-/// - `ignored_dirs`: List of directories to ignore.
-/// - `dir_structure`: The directory structure string to write to the output.
-///
-/// # Returns
-/// - `Ok(())`: On successful processing.
-/// - `Err(io::Error)`: If an error occurs during file processing.
 pub fn process_files(
     config: &Config,
     gitignore: &Gitignore,
@@ -173,17 +145,6 @@ pub fn process_files(
 /// 1. User-specified ignored directories (case-insensitive matching)
 /// 2. Custom exclude directories provided via CLI configuration
 /// 3. Gitignore rules that apply to the path
-///
-/// # Arguments
-/// - `path`: The file or directory path to evaluate
-/// - `is_dir`: Whether the path represents a directory (`true`) or file (`false`)
-/// - `gitignore`: Compiled gitignore rules to check against
-/// - `ignored_dirs`: Predefined list of directory names to ignore (e.g., "node_modules", ".git")
-/// - `exclude_dirs`: Optional user-specified directories to exclude from processing
-///
-/// # Returns
-/// - `true` if the path should be skipped (ignored)
-/// - `false` if the path should be processed
 pub fn should_skip_path(
     path: &Path,
     is_dir: bool,
