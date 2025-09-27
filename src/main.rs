@@ -2,6 +2,7 @@ use std::io;
 
 use crate::cli::parse_args;
 use crate::clipboard::copy_to_clipboard;
+use crate::data::{IGNORED_DIRS, IGNORED_FILES};
 use crate::file_processing::{get_directory_structure, process_files};
 use crate::gitignore::build_gitignore;
 
@@ -10,68 +11,9 @@ mod tests;
 
 mod cli;
 mod clipboard;
+mod data;
 mod file_processing;
 mod gitignore;
-
-/// Files to ignore during directory scanning and processing.
-const IGNORED_FILES: &[&str] = &[
-    "bun.lock",
-    "package-lock.json",
-    "yarn.lock",
-    "pnpm-lock.yaml",
-    "Cargo.lock",
-    ".DS_Store",
-    "uv.lock",
-];
-
-/// Directories to ignore during directory scanning and processing.
-const IGNORED_DIRS: &[&str] = &[
-    "node_modules",
-    ".git",
-    ".svn",
-    ".hg",
-    ".idea",
-    ".vscode",
-    "build",
-    "dist",
-    "src-tauri",
-    ".venv",
-    "__pycache__",
-    ".pytest_cache",
-    ".next",
-    ".turbo",
-    "out",
-    "target",
-    ".meteor",
-    ".local",
-    ".cache",
-    ".config",
-    ".trash",
-    "cargo-target",
-    ".mypy_cache",
-    ".pylint.d",
-    ".ropeproject",
-    ".ipynb_checkpoints",
-    ".parcel-cache",
-    "coverage",
-    "storybook-static",
-    "bin",
-    "pkg",
-    ".gradle",
-    ".settings",
-    ".classpath",
-    ".project",
-    ".docker",
-    ".husky",
-    ".circleci",
-    ".github",
-    ".vercel",
-    "k8s",
-    "helm",
-    ".changeset",
-    ".cursor",
-    ".vite",
-];
 
 fn main() -> io::Result<()> {
     let config = parse_args()?;
