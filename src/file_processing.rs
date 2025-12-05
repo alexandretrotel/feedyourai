@@ -19,7 +19,7 @@ pub fn is_in_ignored_dir(
                 ignored_dirs
                     .iter()
                     .any(|&ignored| ignored.eq_ignore_ascii_case(&name_lower))
-                    || exclude_dirs.as_ref().map_or(false, |dirs| {
+                    || exclude_dirs.as_ref().is_some_and(|dirs| {
                         dirs.iter().any(|dir| dir.eq_ignore_ascii_case(&name_lower))
                     })
             })
@@ -58,7 +58,7 @@ pub fn get_directory_structure(
         }
     }
 
-    structure.push_str("\n");
+    structure.push('\n');
     Ok(structure)
 }
 
@@ -96,26 +96,23 @@ pub fn process_files(
         let metadata = fs::metadata(path)?;
         let file_size = metadata.len();
 
-        if let Some(min) = config.min_size {
-            if file_size < min {
+        if let Some(min) = config.min_size
+            && file_size < min {
                 continue;
             }
-        }
-        if let Some(max) = config.max_size {
-            if file_size > max {
+        if let Some(max) = config.max_size
+            && file_size > max {
                 continue;
             }
-        }
 
         let ext = path
             .extension()
             .and_then(|e| e.to_str())
             .map(|e| e.to_lowercase());
-        if let Some(ref exts) = config.extensions {
-            if ext.is_none() || exts.contains(&ext.unwrap()) {
+        if let Some(ref exts) = config.extensions
+            && (ext.is_none() || exts.contains(&ext.unwrap())) {
                 continue;
             }
-        }
 
         println!("Processing: {} ({} bytes)", path.display(), file_size);
 

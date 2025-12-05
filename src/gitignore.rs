@@ -23,14 +23,14 @@ pub fn build_gitignore(
     for file in ignored_files {
         builder
             .add_line(None, file)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            .map_err(io::Error::other)?;
     }
 
     // Add default ignored directories with trailing `/` to ignore contents
     for dir in ignored_dirs {
         builder
             .add_line(None, &format!("{}/", dir))
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            .map_err(io::Error::other)?;
     }
 
     // Add user-specified excluded directories from CLI
@@ -38,11 +38,11 @@ pub fn build_gitignore(
         for dir in exclude_dirs {
             builder
                 .add_line(None, &format!("{}/", dir))
-                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                .map_err(io::Error::other)?;
         }
     }
 
     builder
         .build()
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+        .map_err(io::Error::other)
 }

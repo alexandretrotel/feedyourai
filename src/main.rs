@@ -28,7 +28,7 @@ fn main() -> io::Result<()> {
     let dir_structure = get_directory_structure(
         &config.directory,
         &gitignore,
-        &IGNORED_DIRS,
+        IGNORED_DIRS,
         &config.exclude_dirs,
     )?;
 
