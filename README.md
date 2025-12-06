@@ -2,6 +2,8 @@
 
 A command-line tool to combine files from a directory into a single file for AI processing, with flexible filtering options.
 
+![Demo: fyai combining files in a terminal](./assets/fyai.gif)
+
 ## Features
 
 - Combines multiple text files into one output file
