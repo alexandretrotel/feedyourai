@@ -1,78 +1,9 @@
 use clap::{Arg, Command};
-use std::io;
-use std::path::PathBuf;
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Config {
-    pub directory: PathBuf,
-    pub output: PathBuf,
-    pub extensions: Option<Vec<String>>,
-    pub min_size: Option<u64>,
-    pub max_size: Option<u64>,
-    pub exclude_dirs: Option<Vec<String>>,
-    pub tree_only: bool,
-}
-
-pub fn config_from_matches(matches: clap::ArgMatches) -> io::Result<Config> {
-    let directory = matches
-        .get_one::<String>("directory")
-        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Missing directory"))?
-        .into();
-    let output = matches
-        .get_one::<String>("output")
-        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Missing output"))?
-        .into();
-    let extensions = matches.get_one::<String>("extensions").map(|ext| {
-        ext.split(',')
-            .map(|s| s.trim().to_lowercase())
-            .filter(|s| !s.is_empty())
-            .collect::<Vec<_>>()
-    });
-    let min_size = matches
-        .get_one::<String>("min_size")
-        .map(|s| {
-            s.parse::<u64>().map_err(|_| {
-                io::Error::new(io::ErrorKind::InvalidInput, "Invalid value for min_size")
-            })
-        })
-        .transpose()?;
-    let max_size = matches
-        .get_one::<String>("max_size")
-        .map(|s| {
-            s.parse::<u64>().map_err(|_| {
-                io::Error::new(io::ErrorKind::InvalidInput, "Invalid value for max_size")
-            })
-        })
-        .transpose()?;
-    let exclude_dirs = matches.get_one::<String>("exclude_dirs").map(|dirs| {
-        dirs.split(',')
-            .map(|s| s.trim().to_lowercase())
-            .filter(|s| !s.is_empty())
-            .collect::<Vec<_>>()
-    });
-    let tree_only = matches.get_flag("tree_only");
-
-    Ok(Config {
-        directory,
-        output,
-        extensions,
-        min_size,
-        max_size,
-        exclude_dirs,
-        tree_only,
-    })
-}
-
-/// Parses command-line arguments and returns a `Config` struct.
-pub fn parse_args() -> io::Result<Config> {
-    let matches = create_commands().get_matches();
-    config_from_matches(matches)
-}
 
 pub fn create_commands() -> Command {
     Command::new("fyai")
         .version(env!("CARGO_PKG_VERSION"))
-        .about("A tool to combine text files for AI processing with filtering options.")
+        .about("A tool to combine text files for AI processing with flexible filtering options.\n\nCONFIG FILE SUPPORT:\n  - You can specify options in a config file (YAML format).\n  - Local config: ./fyai.yaml (used if present in current directory)\n  - Global config: ~/.config/fyai.yaml (used if no local config found)\n  - CLI options override config file values.\n  - See README for details and examples.")
         .arg(
             Arg::new("directory")
                 .short('d')
@@ -90,11 +21,46 @@ pub fn create_commands() -> Command {
                 .default_value("fyai.txt"),
         )
         .arg(
-            Arg::new("extensions")
-                .short('e')
-                .long("ext")
+            Arg::new("include_dirs")
+                .long("include-dirs")
+                .value_name("DIRS")
+                .help("Comma-separated list of directories to include (e.g., src,docs)"),
+        )
+        .arg(
+            Arg::new("exclude_dirs")
+                .long("exclude-dirs")
+                .value_name("DIRS")
+                .help("Comma-separated list of directories to exclude (e.g., node_modules,dist)"),
+        )
+        .arg(
+            Arg::new("include_ext")
+                .long("include-ext")
                 .value_name("EXT")
-                .help("Comma-separated list of file extensions to exclude (e.g., txt,md)"),
+                .help("Comma-separated list of file extensions to include (e.g., txt,md)"),
+        )
+        .arg(
+            Arg::new("exclude_ext")
+                .long("exclude-ext")
+                .value_name("EXT")
+                .help("Comma-separated list of file extensions to exclude (e.g., log,tmp)"),
+        )
+        .arg(
+            Arg::new("include_files")
+                .long("include-files")
+                .value_name("FILES")
+                .help("Comma-separated list of file names to include (e.g., README.md,main.rs)"),
+        )
+        .arg(
+            Arg::new("exclude_files")
+                .long("exclude-files")
+                .value_name("FILES")
+                .help("Comma-separated list of file names to exclude (e.g., LICENSE,config.json)"),
+        )
+        .arg(
+            Arg::new("respect_gitignore")
+                .long("respect-gitignore")
+                .value_name("BOOL")
+                .help("Whether to respect .gitignore rules (true/false) [default: true]"),
         )
         .arg(
             Arg::new("min_size")
@@ -111,13 +77,6 @@ pub fn create_commands() -> Command {
                 .help("Exclude files larger than this size in bytes"),
         )
         .arg(
-            Arg::new("exclude_dirs")
-                .short('x')
-                .long("exclude-dirs")
-                .value_name("DIRS")
-                .help("Comma-separated list of directories to exclude (e.g., node_modules,dist)"),
-        )
-        .arg(
             clap::Arg::new("tree_only")
                 .long("tree-only")
                 .action(clap::ArgAction::SetTrue)
@@ -128,6 +87,21 @@ pub fn create_commands() -> Command {
                 .short('t')
                 .long("test")
                 .action(clap::ArgAction::SetTrue)
-                .help("Enable test mode"),
+                .help("Run in test mode"),
+        ).subcommand(
+            Command::new("init")
+                .about("Generate a template fyai.yaml config file")
+                .arg(
+                    Arg::new("global")
+                        .long("global")
+                        .help("Generate config in ~/.config/fyai.yaml")
+                        .action(clap::ArgAction::SetTrue),
+                )
+                .arg(
+                    Arg::new("force")
+                        .long("force")
+                        .help("Overwrite existing config file if present")
+                        .action(clap::ArgAction::SetTrue),
+                ),
         )
 }

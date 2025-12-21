@@ -2,20 +2,21 @@
 mod tests {
     use std::path::PathBuf;
 
-    use crate::cli::{config_from_matches, create_commands};
+    use crate::{cli::create_commands, config::config_from_matches};
 
     #[test]
     fn test_default_config() {
         let args = create_commands().get_matches_from(vec!["fyai"]);
-        let config = config_from_matches(args).unwrap();
+        let (config, _explicit) = config_from_matches(args).unwrap();
 
         assert_eq!(config.directory, PathBuf::from("."));
         assert_eq!(config.output, PathBuf::from("fyai.txt"));
-        assert_eq!(config.extensions, None);
-        assert_eq!(config.min_size, None);
-        assert_eq!(config.max_size, None);
-        assert_eq!(config.exclude_dirs, None); // Check default
-        assert_eq!(config.tree_only, false);
+        assert!(config.include_ext.is_none());
+        assert!(config.exclude_ext.is_none());
+        assert!(config.min_size.is_none());
+        assert!(config.max_size.is_none());
+        assert!(config.exclude_dirs.is_none()); // Check default
+        assert!(!config.tree_only);
     }
 
     #[test]
@@ -27,24 +28,26 @@ mod tests {
             "--output",
             "custom.txt",
         ]);
-        let config = config_from_matches(args).unwrap();
+        let (config, _explicit) = config_from_matches(args).unwrap();
 
         assert_eq!(config.directory, PathBuf::from("/path/to/dir"));
         assert_eq!(config.output, PathBuf::from("custom.txt"));
-        assert_eq!(config.extensions, None);
-        assert_eq!(config.min_size, None);
-        assert_eq!(config.max_size, None);
-        assert_eq!(config.exclude_dirs, None);
-        assert_eq!(config.tree_only, false);
+        assert!(config.include_ext.is_none());
+        assert!(config.exclude_ext.is_none());
+        assert!(config.min_size.is_none());
+        assert!(config.max_size.is_none());
+        assert!(config.exclude_dirs.is_none());
+        assert!(!config.tree_only);
     }
 
     #[test]
     fn test_extensions_parsing() {
-        let args = create_commands().get_matches_from(vec!["fyai", "--ext", "txt, md, pdf"]);
-        let config = config_from_matches(args).unwrap();
+        let args =
+            create_commands().get_matches_from(vec!["fyai", "--include-ext", "txt, md, pdf"]);
+        let (config, _explicit) = config_from_matches(args).unwrap();
 
         assert_eq!(
-            config.extensions,
+            config.include_ext,
             Some(vec!["txt".to_string(), "md".to_string(), "pdf".to_string()])
         );
     }
@@ -52,7 +55,7 @@ mod tests {
     #[test]
     fn test_exclude_dirs_parsing() {
         let args = create_commands().get_matches_from(vec!["fyai", "--exclude-dirs", "src,tests"]);
-        let config = config_from_matches(args).unwrap();
+        let (config, _explicit) = config_from_matches(args).unwrap();
 
         assert_eq!(
             config.exclude_dirs,
@@ -64,7 +67,7 @@ mod tests {
     fn test_exclude_dirs_with_empty_and_spaces() {
         let args =
             create_commands().get_matches_from(vec!["fyai", "--exclude-dirs", "src,, tests ,docs"]);
-        let config = config_from_matches(args).unwrap();
+        let (config, _explicit) = config_from_matches(args).unwrap();
 
         assert_eq!(
             config.exclude_dirs,
@@ -85,7 +88,7 @@ mod tests {
             "--max-size",
             "5000",
         ]);
-        let config = config_from_matches(args).unwrap();
+        let (config, _explicit) = config_from_matches(args).unwrap();
 
         assert_eq!(config.min_size, Some(1000));
         assert_eq!(config.max_size, Some(5000));
@@ -97,10 +100,7 @@ mod tests {
         let result = config_from_matches(args);
 
         assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            "Invalid value for min_size"
-        );
+        assert_eq!(result.unwrap_err().to_string(), "Invalid min-size");
     }
 
     #[test]
@@ -109,19 +109,17 @@ mod tests {
         let result = config_from_matches(args);
 
         assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            "Invalid value for max_size"
-        );
+        assert_eq!(result.unwrap_err().to_string(), "Invalid max-size");
     }
 
     #[test]
     fn test_extensions_with_empty_and_spaces() {
-        let args = create_commands().get_matches_from(vec!["fyai", "--ext", "txt,, md ,pdf"]);
-        let config = config_from_matches(args).unwrap();
+        let args =
+            create_commands().get_matches_from(vec!["fyai", "--include-ext", "txt,, md ,pdf"]);
+        let (config, _explicit) = config_from_matches(args).unwrap();
 
         assert_eq!(
-            config.extensions,
+            config.include_ext,
             Some(vec!["txt".to_string(), "md".to_string(), "pdf".to_string()])
         );
     }
@@ -129,8 +127,8 @@ mod tests {
     #[test]
     fn test_tree_only_flag() {
         let args = create_commands().get_matches_from(vec!["fyai", "--tree-only"]);
-        let config = config_from_matches(args).unwrap();
+        let (config, _explicit) = config_from_matches(args).unwrap();
 
-        assert_eq!(config.tree_only, true);
+        assert!(config.tree_only);
     }
 }

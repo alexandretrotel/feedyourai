@@ -6,6 +6,8 @@ mod cli_tests;
 #[cfg(test)]
 mod clipboard_tests;
 #[cfg(test)]
+mod config_tests;
+#[cfg(test)]
 mod file_processing_tests;
 #[cfg(test)]
 mod gitignore_tests;

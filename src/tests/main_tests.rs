@@ -1,69 +1,107 @@
-#[cfg(test)]
-mod tests {
-    use tempfile::TempDir;
+use std::{
+    env, fs, io,
+    path::PathBuf,
+    sync::{Mutex, OnceLock},
+};
+use tempfile::TempDir;
 
-    use crate::IGNORED_DIRS;
-    use crate::IGNORED_FILES;
-    use crate::build_gitignore;
-    use crate::copy_to_clipboard;
-    use crate::get_directory_structure;
-    use crate::process_files;
-    use std::io;
+use crate::cli::create_commands;
 
-    use crate::cli;
+static SERIALIZE_TESTS: OnceLock<Mutex<()>> = OnceLock::new();
 
-    // Mock trait for cli
-    trait CliParser {
-        fn parse_args(&self) -> io::Result<cli::Config>;
+fn acquire_lock() -> &'static Mutex<()> {
+    SERIALIZE_TESTS.get_or_init(|| Mutex::new(()))
+}
+
+fn lock_tests() -> std::sync::MutexGuard<'static, ()> {
+    acquire_lock()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+/// Helper to restore the current working directory when dropped.
+struct CwdGuard {
+    orig: PathBuf,
+}
+
+impl CwdGuard {
+    fn new() -> Self {
+        let orig = env::current_dir().expect("failed to get current dir");
+        Self { orig }
     }
+}
 
-    struct MockCliParser {
-        result: io::Result<cli::Config>,
+impl Drop for CwdGuard {
+    fn drop(&mut self) {
+        // Best-effort restore; tests will fail earlier if this can't be done.
+        let _ = env::set_current_dir(&self.orig);
     }
+}
 
-    impl CliParser for MockCliParser {
-        fn parse_args(&self) -> io::Result<cli::Config> {
-            match &self.result {
-                Ok(config) => Ok(config.clone()),
-                Err(err) => Err(io::Error::new(err.kind(), err.to_string())),
-            }
-        }
-    }
+#[test]
+fn test_init_local_creates_file() {
+    // Create a temporary directory and switch to it so init writes ./fyai.yaml there.
+    let _serial = lock_tests();
+    let temp = TempDir::new().expect("create tempdir");
+    let _cwd_guard = CwdGuard::new();
+    env::set_current_dir(temp.path()).expect("set cwd to temp");
 
-    #[test]
-    fn test_main_with_mock_cli() {
-        // Create a temporary directory for testing
-        let temp_dir = TempDir::new().expect("Failed to create temporary directory");
-        let temp_output = temp_dir.path().join("output.txt");
+    let matches = create_commands().get_matches_from(vec!["fyai", "init"]);
+    let handled = crate::handle_init_subcommand(&matches)
+        .expect("handle_init_subcommand should succeed for local init");
+    assert!(handled, "Expected init subcommand to be handled");
 
-        let mock_cli = MockCliParser {
-            result: Ok(cli::Config {
-                directory: temp_dir.path().to_path_buf(),
-                output: temp_output.clone(),
-                extensions: vec![].into(),
-                min_size: Some(0),
-                max_size: Some(1024),
-                exclude_dirs: None,
-                tree_only: false,
-            }),
-        };
+    let file_path = temp.path().join("fyai.yaml");
+    assert!(file_path.exists(), "Expected local fyai.yaml to be created");
 
-        // Simulate main's logic with the mock
-        let result = mock_cli.parse_args().and_then(|config| {
-            // Use real implementations for other dependencies or mock them similarly
-            let gitignore =
-                build_gitignore(&config.directory, &IGNORED_FILES, &IGNORED_DIRS, &None)?;
-            let dir_structure = get_directory_structure(
-                &config.directory,
-                &gitignore,
-                &IGNORED_DIRS,
-                &config.exclude_dirs,
-            )?;
-            process_files(&config, &gitignore, &dir_structure, IGNORED_DIRS)?;
-            copy_to_clipboard(&config.output)?;
-            Ok(())
-        });
+    // Check the file contains the expected header to ensure it's the template.
+    let content = fs::read_to_string(&file_path).expect("read created fyai.yaml");
+    assert!(
+        content.contains("# fyai.yaml - Configuration file for fyai"),
+        "Template content not found"
+    );
+}
 
-        assert!(result.is_ok(), "Expected Ok, got {:?}", result);
-    }
+#[test]
+fn test_init_already_exists_without_force_errors() {
+    // Ensure local file exists and that calling init without --force returns AlreadyExists
+    let _serial = lock_tests();
+    let temp = TempDir::new().expect("create tempdir");
+    let _cwd_guard = CwdGuard::new();
+    env::set_current_dir(temp.path()).expect("set cwd to temp");
+
+    let file_path = temp.path().join("fyai.yaml");
+    fs::write(&file_path, "existing").expect("create existing file");
+
+    let matches = create_commands().get_matches_from(vec!["fyai", "init"]);
+    let res = crate::handle_init_subcommand(&matches);
+    assert!(
+        res.is_err(),
+        "Expected error when config exists and --force not provided"
+    );
+    let err = res.unwrap_err();
+    assert_eq!(err.kind(), io::ErrorKind::AlreadyExists);
+}
+
+#[test]
+fn test_init_force_overwrites_existing() {
+    // Create an existing fyai.yaml and call init --force to overwrite it.
+    let _serial = lock_tests();
+    let temp = TempDir::new().expect("create tempdir");
+    let _cwd_guard = CwdGuard::new();
+    env::set_current_dir(temp.path()).expect("set cwd to temp");
+
+    let file_path = temp.path().join("fyai.yaml");
+    fs::write(&file_path, "old content").expect("create existing file");
+
+    let matches = create_commands().get_matches_from(vec!["fyai", "init", "--force"]);
+    let handled = crate::handle_init_subcommand(&matches)
+        .expect("handle_init_subcommand should succeed with --force");
+    assert!(handled, "Expected init to be handled even with --force");
+
+    let content = fs::read_to_string(&file_path).expect("read overwritten fyai.yaml");
+    assert!(
+        content.contains("# fyai.yaml - Configuration file for fyai"),
+        "Expected template content after force overwrite"
+    );
 }
