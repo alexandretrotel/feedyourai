@@ -194,11 +194,11 @@ pub fn config_from_matches(matches: clap::ArgMatches) -> std::io::Result<Config>
         Err(_) => true,
     };
 
-    // For flags, keep using contains_id + get_flag which is safe when checked first
-    let tree_only = if matches.contains_id("tree_only") {
-        matches.get_flag("tree_only")
-    } else {
-        false
+    // For flags, use try_get_one to safely handle whether the arg is registered
+    let tree_only = match matches.try_get_one::<bool>("tree_only") {
+        Ok(Some(b)) => *b,
+        Ok(None) => false,
+        Err(_) => false,
     };
 
     Ok(Config {
