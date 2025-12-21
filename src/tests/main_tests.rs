@@ -94,6 +94,7 @@ fn test_init_global_uses_home_dir() {
     let _serial = lock_tests();
     let temp_home = TempDir::new().expect("create tempdir for HOME");
     let _env_guard = EnvVarGuard::set("HOME", temp_home.path().to_str().unwrap());
+    let _env_guard_xdg = EnvVarGuard::set("XDG_CONFIG_HOME", temp_home.path().to_str().unwrap());
 
     let matches = create_commands().get_matches_from(vec!["fyai", "init", "--global"]);
     let handled = crate::handle_init_subcommand(&matches)

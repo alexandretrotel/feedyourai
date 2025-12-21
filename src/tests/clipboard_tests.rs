@@ -10,8 +10,8 @@ mod tests {
         let file_path = temp_dir.path().join("test.txt");
         create_file(&file_path, "Hello, clipboard!")?;
 
-        // Skip actual clipboard interaction in CI or headless environments
-        if std::env::var("CI").is_ok() || std::env::var("DISPLAY").is_err() {
+        // Skip actual clipboard interaction in CI
+        if std::env::var("CI").is_ok() {
             return Ok(());
         }
 
