@@ -107,7 +107,7 @@ mod tests {
             respect_gitignore: true,
             tree_only: false,
         };
-        let gitignore = build_gitignore(temp_dir.path(), &IGNORED_FILES, &IGNORED_DIRS, &config)?;
+        let gitignore = build_gitignore(temp_dir.path(), IGNORED_FILES, IGNORED_DIRS, &config)?;
 
         // Ensure .gitignore was detected (we created it, so builder.add(...) branch is executed)
         assert!(
@@ -160,7 +160,7 @@ mod tests {
             respect_gitignore: true,
             tree_only: false,
         };
-        let gitignore = build_gitignore(temp_dir.path(), &IGNORED_FILES, &IGNORED_DIRS, &config)?;
+        let gitignore = build_gitignore(temp_dir.path(), IGNORED_FILES, IGNORED_DIRS, &config)?;
 
         // Verify that files inside the CLI-specified excluded dir are ignored
         let test_file = temp_dir.path().join(cli_dir).join("test.txt");

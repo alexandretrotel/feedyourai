@@ -25,7 +25,7 @@ mod tests {
                 || result
                     .as_ref()
                     .err()
-                    .map_or(false, |e| e.kind() == io::ErrorKind::Other)
+                    .is_some_and(|e| e.kind() == io::ErrorKind::Other)
         );
         Ok(())
     }
