@@ -99,9 +99,19 @@ pub fn get_directory_structure(
         return Ok(structure);
     }
 
+    let output_canon = fs::canonicalize(&config.output).ok();
+
     for entry in WalkDir::new(root).into_iter().filter_map(Result::ok) {
         let path = entry.path();
         let is_dir = path.is_dir();
+
+        if let Some(output_canon) = output_canon.as_ref() {
+            if let Ok(path_canon) = fs::canonicalize(path) {
+                if path_canon == *output_canon {
+                    continue;
+                }
+            }
+        }
 
         if should_skip_path_advanced(path, is_dir, gitignore, ignored_dirs, config) {
             continue;
@@ -131,12 +141,20 @@ pub fn process_files(
 
     println!("Processing files in: {:?}", config.directory);
 
+    let output_canon = fs::canonicalize(&config.output).ok();
+
     for entry in WalkDir::new(&config.directory)
         .into_iter()
         .filter_map(Result::ok)
     {
         let path = entry.path();
-        if path == config.output {
+        if let Some(output_canon) = output_canon.as_ref() {
+            if let Ok(path_canon) = fs::canonicalize(path) {
+                if path_canon == *output_canon {
+                    continue;
+                }
+            }
+        } else if path == config.output {
             continue;
         }
 
@@ -248,14 +266,16 @@ pub fn should_skip_path_advanced(
             return true;
         }
         let ext = path.extension().and_then(|e| e.to_str());
+        let ext_str = ext.unwrap_or("").to_lowercase();
+
         if let Some(excludes) = &config.exclude_ext
-            && ext.is_some()
-            && excludes.iter().any(|e| e == &ext.unwrap().to_lowercase())
+            && excludes.iter().any(|e| e == &ext_str)
         {
             return true;
         }
+
         if let Some(includes) = &config.include_ext
-            && (ext.is_none() || !includes.iter().any(|e| e == &ext.unwrap().to_lowercase()))
+            && !includes.iter().any(|e| e == &ext_str)
         {
             return true;
         }

@@ -845,4 +845,168 @@ mod tests {
             &config
         ));
     }
+
+    // New tests to increase coverage around file processing branches:
+    #[test]
+    fn test_process_files_extension_filters() -> io::Result<()> {
+        // Use separate temporary directories for each subcase so outputs from one run
+        // cannot be picked up by subsequent runs.
+        let ignored_dirs = ["node_modules"];
+        let gitignore = create_gitignore_empty();
+
+        // Subcase 1: include_ext only allows .md
+        let temp_dir1 = setup_temp_dir();
+        create_file(temp_dir1.path().join("a.txt"), "A")?;
+        create_file(temp_dir1.path().join("b.md"), "B")?;
+        create_file(temp_dir1.path().join("noext"), "NOEXT")?;
+
+        let config_md = Config {
+            directory: temp_dir1.path().to_path_buf(),
+            output: temp_dir1.path().join("out_md.txt"),
+            include_dirs: None,
+            exclude_dirs: None,
+            include_ext: Some(vec!["md".to_string()]),
+            exclude_ext: None,
+            include_files: None,
+            exclude_files: None,
+            min_size: Some(0),
+            max_size: None,
+            respect_gitignore: true,
+            tree_only: false,
+        };
+        let dir_structure =
+            get_directory_structure(temp_dir1.path(), &gitignore, &ignored_dirs, &config_md)?;
+        process_files(&config_md, &gitignore, &dir_structure, &ignored_dirs)?;
+        let out_md = fs::read_to_string(&config_md.output)?;
+        assert!(out_md.contains("=== File: b.md"));
+        assert!(!out_md.contains("=== File: a.txt"));
+        assert!(!out_md.contains("=== File: noext"));
+
+        // Subcase 2: exclude_ext prevents .md files
+        let temp_dir2 = setup_temp_dir();
+        create_file(temp_dir2.path().join("a.txt"), "A")?;
+        create_file(temp_dir2.path().join("b.md"), "B")?;
+        create_file(temp_dir2.path().join("noext"), "NOEXT")?;
+
+        let config_excl = Config {
+            directory: temp_dir2.path().to_path_buf(),
+            output: temp_dir2.path().join("out_excl.txt"),
+            include_dirs: None,
+            exclude_dirs: None,
+            include_ext: None,
+            exclude_ext: Some(vec!["md".to_string()]),
+            include_files: None,
+            exclude_files: None,
+            min_size: Some(0),
+            max_size: None,
+            respect_gitignore: true,
+            tree_only: false,
+        };
+        let dir_structure =
+            get_directory_structure(temp_dir2.path(), &gitignore, &ignored_dirs, &config_excl)?;
+        process_files(&config_excl, &gitignore, &dir_structure, &ignored_dirs)?;
+        let out_excl = fs::read_to_string(&config_excl.output)?;
+        assert!(out_excl.contains("=== File: a.txt"));
+        assert!(!out_excl.contains("=== File: b.md"));
+
+        // Subcase 3: include_ext containing empty string to include files with no extension
+        let temp_dir3 = setup_temp_dir();
+        create_file(temp_dir3.path().join("a.txt"), "A")?;
+        create_file(temp_dir3.path().join("b.md"), "B")?;
+        create_file(temp_dir3.path().join("noext"), "NOEXT")?;
+
+        let config_noext = Config {
+            directory: temp_dir3.path().to_path_buf(),
+            output: temp_dir3.path().join("out_noext.txt"),
+            include_dirs: None,
+            exclude_dirs: None,
+            include_ext: Some(vec!["".to_string()]),
+            exclude_ext: None,
+            include_files: None,
+            exclude_files: None,
+            min_size: Some(0),
+            max_size: None,
+            respect_gitignore: true,
+            tree_only: false,
+        };
+        let dir_structure =
+            get_directory_structure(temp_dir3.path(), &gitignore, &ignored_dirs, &config_noext)?;
+        process_files(&config_noext, &gitignore, &dir_structure, &ignored_dirs)?;
+        let out_noext = fs::read_to_string(&config_noext.output)?;
+        assert!(out_noext.contains("=== File: noext"));
+        assert!(!out_noext.contains("=== File: b.md"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_process_files_skips_output_file() -> io::Result<()> {
+        let temp_dir = setup_temp_dir();
+        // Create a file that has the same name as the output file to ensure it's skipped
+        create_file(temp_dir.path().join("output.txt"), "SHOULD_NOT_BE_INCLUDED")?;
+        create_file(temp_dir.path().join("keep.txt"), "KEEP")?;
+
+        let config = Config {
+            directory: temp_dir.path().to_path_buf(),
+            output: temp_dir.path().join("output.txt"),
+            include_dirs: None,
+            exclude_dirs: None,
+            include_ext: None,
+            exclude_ext: None,
+            include_files: None,
+            exclude_files: None,
+            min_size: Some(0),
+            max_size: None,
+            respect_gitignore: true,
+            tree_only: false,
+        };
+        let ignored_dirs = ["node_modules"];
+        let gitignore = create_gitignore_empty();
+        let dir_structure =
+            get_directory_structure(temp_dir.path(), &gitignore, &ignored_dirs, &config)?;
+        process_files(&config, &gitignore, &dir_structure, &ignored_dirs)?;
+
+        let output_content = fs::read_to_string(&config.output)?;
+        // The pre-existing content "SHOULD_NOT_BE_INCLUDED" should NOT be treated as a processed file content
+        assert!(!output_content.contains("SHOULD_NOT_BE_INCLUDED"));
+        // But the other file should be present
+        assert!(output_content.contains("=== File: keep.txt"));
+        assert!(output_content.contains("KEEP"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_directory_structure_with_include_dirs() -> io::Result<()> {
+        let temp_dir = TempDir::new().unwrap();
+        let root = temp_dir.path();
+        // Create directories
+        fs::create_dir_all(root.join("docs"))?;
+        fs::create_dir_all(root.join("src"))?;
+        create_file(root.join("docs/guide.md"), "Guide")?;
+        create_file(root.join("src/main.rs"), "fn main() {}")?;
+
+        let gitignore = Gitignore::empty();
+        let ignored_dirs: Vec<&str> = vec![];
+        let config = Config {
+            directory: root.to_path_buf(),
+            output: root.join("output.txt"),
+            include_dirs: Some(vec!["docs".to_string()]),
+            exclude_dirs: None,
+            include_ext: None,
+            exclude_ext: None,
+            include_files: None,
+            exclude_files: None,
+            min_size: None,
+            max_size: None,
+            respect_gitignore: true,
+            tree_only: false,
+        };
+
+        let result = get_directory_structure(root, &gitignore, &ignored_dirs, &config)?;
+        assert!(result.contains("docs/"));
+        assert!(result.contains("guide.md"));
+        assert!(!result.contains("src/"));
+        assert!(!result.contains("main.rs"));
+        Ok(())
+    }
 }
