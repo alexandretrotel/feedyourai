@@ -107,9 +107,10 @@ pub fn get_directory_structure(
 
         if let Some(output_canon) = output_canon.as_ref()
             && let Ok(path_canon) = fs::canonicalize(path)
-                && path_canon == *output_canon {
-                    continue;
-                }
+            && path_canon == *output_canon
+        {
+            continue;
+        }
 
         if should_skip_path_advanced(path, is_dir, gitignore, ignored_dirs, config) {
             continue;
@@ -148,9 +149,10 @@ pub fn process_files(
         let path = entry.path();
         if let Some(output_canon) = output_canon.as_ref() {
             if let Ok(path_canon) = fs::canonicalize(path)
-                && path_canon == *output_canon {
-                    continue;
-                }
+                && path_canon == *output_canon
+            {
+                continue;
+            }
         } else if path == config.output {
             continue;
         }

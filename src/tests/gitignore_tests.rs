@@ -26,7 +26,7 @@ mod tests {
             respect_gitignore: true,
             tree_only: false,
         };
-        let gitignore = build_gitignore(temp_dir.path(), &IGNORED_FILES, &IGNORED_DIRS, &config)?;
+        let gitignore = build_gitignore(temp_dir.path(), IGNORED_FILES, IGNORED_DIRS, &config)?;
 
         // Verify that .gitignore file was not created
         let gitignore_path = temp_dir.path().join(".gitignore");
