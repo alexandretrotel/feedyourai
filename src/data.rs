@@ -46,7 +46,6 @@ pub const IGNORED_DIRS: &[&str] = &[
     "__pycache__",
     "bin",
     "build",
-    "cargo-target",
     "coverage",
     "dist",
     "helm",
