@@ -367,3 +367,60 @@ fn test_missing_output_error_message() {
     let err = res.unwrap_err();
     assert!(err.to_string().to_lowercase().contains("missing output"));
 }
+
+/// Additional tests to cover branches where args are registered-but-not-provided
+/// and where string-based args are not registered at all.
+
+#[test]
+fn test_respect_gitignore_registered_but_not_provided() {
+    // respect_gitignore is registered but not supplied -> should take Ok(None) => true
+    let app = Command::new("test")
+        .arg(Arg::new("directory").long("directory").num_args(1))
+        .arg(Arg::new("output").long("output").num_args(1))
+        .arg(
+            Arg::new("respect_gitignore")
+                .long("respect_gitignore")
+                .num_args(1),
+        );
+
+    let matches = app.get_matches_from(vec!["prog", "--directory", "d", "--output", "o"]);
+    let cfg = config_from_matches(matches).expect("create config");
+    assert!(cfg.respect_gitignore);
+}
+
+#[test]
+fn test_tree_only_registered_but_not_provided() {
+    // tree_only is registered as a flag but not present in args -> Ok(None) => false
+    let app = Command::new("test")
+        .arg(Arg::new("directory").long("directory").num_args(1))
+        .arg(Arg::new("output").long("output").num_args(1))
+        .arg(
+            Arg::new("tree_only")
+                .long("tree_only")
+                .action(ArgAction::SetTrue),
+        );
+
+    let matches = app.get_matches_from(vec!["prog", "--directory", "d", "--output", "o"]);
+    let cfg = config_from_matches(matches).expect("create config");
+    assert!(!cfg.tree_only);
+}
+
+#[test]
+fn test_unregistered_string_args_return_none() {
+    // Several string args are not registered at all; try_get_one should return Err(_) and code maps those to None
+    let app = Command::new("test")
+        .arg(Arg::new("directory").long("directory").num_args(1))
+        .arg(Arg::new("output").long("output").num_args(1));
+
+    let matches = app.get_matches_from(vec!["prog", "--directory", "d", "--output", "o"]);
+    let cfg = config_from_matches(matches).expect("create config");
+
+    assert!(cfg.include_dirs.is_none());
+    assert!(cfg.exclude_dirs.is_none());
+    assert!(cfg.include_ext.is_none());
+    assert!(cfg.exclude_ext.is_none());
+    assert!(cfg.include_files.is_none());
+    assert!(cfg.exclude_files.is_none());
+    assert!(cfg.min_size.is_none());
+    assert!(cfg.max_size.is_none());
+}
