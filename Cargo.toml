@@ -8,6 +8,7 @@ license = "MIT"
 homepage = "https://github.com/alexandretrotel/feedyourai"
 repository = "https://github.com/alexandretrotel/feedyourai"
 documentation = "https://github.com/alexandretrotel/feedyourai"
+exclude = ["assets/*", ".github/*"]
 
 [[bin]]
 name = "fyai"
