@@ -5,24 +5,23 @@ mod tests {
     use crate::IGNORED_DIRS;
     use crate::IGNORED_FILES;
     use crate::build_gitignore;
+    use crate::config;
     use crate::copy_to_clipboard;
     use crate::get_directory_structure;
     use crate::process_files;
     use std::io;
 
-    use crate::cli;
-
     // Mock trait for cli
     trait CliParser {
-        fn parse_args(&self) -> io::Result<cli::Config>;
+        fn parse_args(&self) -> io::Result<config::Config>;
     }
 
     struct MockCliParser {
-        result: io::Result<cli::Config>,
+        result: io::Result<config::Config>,
     }
 
     impl CliParser for MockCliParser {
-        fn parse_args(&self) -> io::Result<cli::Config> {
+        fn parse_args(&self) -> io::Result<config::Config> {
             match &self.result {
                 Ok(config) => Ok(config.clone()),
                 Err(err) => Err(io::Error::new(err.kind(), err.to_string())),
@@ -37,7 +36,7 @@ mod tests {
         let temp_output = temp_dir.path().join("output.txt");
 
         let mock_cli = MockCliParser {
-            result: Ok(cli::Config {
+            result: Ok(config::Config {
                 directory: temp_dir.path().to_path_buf(),
                 output: temp_output.clone(),
                 include_dirs: None,

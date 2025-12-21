@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::cli::Config;
+    use crate::config::Config;
     use crate::file_processing::{
         get_directory_structure, is_in_ignored_dir, process_files, should_skip_path_advanced,
     };
@@ -683,12 +683,7 @@ mod tests {
             directory: PathBuf::from("."),
             output: PathBuf::from("out.txt"),
             include_dirs: None,
-            exclude_dirs: Some(vec![
-                "node_modules".to_string(),
-                ".git".to_string(),
-                "tests".to_string(),
-                "target".to_string(),
-            ]),
+            exclude_dirs: Some(vec!["target".to_string()]),
             include_ext: None,
             exclude_ext: None,
             include_files: None,

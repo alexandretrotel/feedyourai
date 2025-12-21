@@ -11,7 +11,7 @@ mod tests {
         let temp_dir = TempDir::new()?;
 
         // Build the Gitignore instance with no existing .gitignore and no excluded dirs
-        let config = crate::cli::Config {
+        let config = crate::config::Config {
             directory: temp_dir.path().to_path_buf(),
             output: temp_dir.path().join("output.txt"),
             include_dirs: None,

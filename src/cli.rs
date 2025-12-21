@@ -1,11 +1,9 @@
 use clap::{Arg, Command};
 
-use crate::config::{Config, config_from_matches};
-
 pub fn create_commands() -> Command {
     Command::new("fyai")
         .version(env!("CARGO_PKG_VERSION"))
-        .about("A tool to combine text files for AI processing with flexible filtering options.\n\nCONFIG FILE SUPPORT:\n  - You can specify options in a config file (YAML format).\n  - Local config: ./fyai.yaml (used if present in current directory)\n  - Global config: ~/.fyai/config.yaml (used if no local config found)\n  - CLI options override config file values.\n  - See README for details and examples.")
+        .about("A tool to combine text files for AI processing with flexible filtering options.\n\nCONFIG FILE SUPPORT:\n  - You can specify options in a config file (YAML format).\n  - Local config: ./fyai.yaml (used if present in current directory)\n  - Global config: ~/.config/fyai.yaml (used if no local config found)\n  - CLI options override config file values.\n  - See README for details and examples.")
         .arg(
             Arg::new("directory")
                 .short('d')
@@ -90,11 +88,20 @@ pub fn create_commands() -> Command {
                 .long("test")
                 .action(clap::ArgAction::SetTrue)
                 .help("Run in test mode"),
+        ).subcommand(
+            Command::new("init")
+                .about("Generate a template fyai.yaml config file")
+                .arg(
+                    Arg::new("global")
+                        .long("global")
+                        .help("Generate config in ~/.config/fyai.yaml")
+                        .action(clap::ArgAction::SetTrue),
+                )
+                .arg(
+                    Arg::new("force")
+                        .long("force")
+                        .help("Overwrite existing config file if present")
+                        .action(clap::ArgAction::SetTrue),
+                ),
         )
-}
-
-/// Parses command-line arguments and returns a `Config` struct.
-pub fn parse_args() -> std::io::Result<Config> {
-    let matches = create_commands().get_matches();
-    config_from_matches(matches)
 }

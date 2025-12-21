@@ -2,7 +2,7 @@
 mod tests {
     use std::path::PathBuf;
 
-    use crate::cli::{config_from_matches, create_commands};
+    use crate::{cli::create_commands, config::config_from_matches};
 
     #[test]
     fn test_default_config() {
