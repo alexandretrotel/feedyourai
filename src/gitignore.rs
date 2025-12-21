@@ -5,11 +5,13 @@ use std::path::Path;
 /// Builds a `Gitignore` instance from the specified directory and `.gitignore` file,
 /// appending default ignored files and directories to `.gitignore` if they don't exist,
 /// and normalizes existing directory entries to `folder/**`.
+use crate::cli::Config;
+
 pub fn build_gitignore(
     dir_path: &Path,
     ignored_files: &[&str],
     ignored_dirs: &[&str],
-    exclude_dirs: &Option<Vec<String>>,
+    config: &Config,
 ) -> io::Result<Gitignore> {
     let mut builder = GitignoreBuilder::new(dir_path);
 
@@ -21,9 +23,7 @@ pub fn build_gitignore(
 
     // Add default ignored files as patterns
     for file in ignored_files {
-        builder
-            .add_line(None, file)
-            .map_err(io::Error::other)?;
+        builder.add_line(None, file).map_err(io::Error::other)?;
     }
 
     // Add default ignored directories with trailing `/` to ignore contents
@@ -34,7 +34,7 @@ pub fn build_gitignore(
     }
 
     // Add user-specified excluded directories from CLI
-    if let Some(exclude_dirs) = exclude_dirs {
+    if let Some(exclude_dirs) = &config.exclude_dirs {
         for dir in exclude_dirs {
             builder
                 .add_line(None, &format!("{}/", dir))
@@ -42,7 +42,5 @@ pub fn build_gitignore(
         }
     }
 
-    builder
-        .build()
-        .map_err(io::Error::other)
+    builder.build().map_err(io::Error::other)
 }

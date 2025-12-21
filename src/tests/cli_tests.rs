@@ -11,7 +11,8 @@ mod tests {
 
         assert_eq!(config.directory, PathBuf::from("."));
         assert_eq!(config.output, PathBuf::from("fyai.txt"));
-        assert_eq!(config.extensions, None);
+        assert_eq!(config.include_ext, None);
+        assert_eq!(config.exclude_ext, None);
         assert_eq!(config.min_size, None);
         assert_eq!(config.max_size, None);
         assert_eq!(config.exclude_dirs, None); // Check default
@@ -31,7 +32,8 @@ mod tests {
 
         assert_eq!(config.directory, PathBuf::from("/path/to/dir"));
         assert_eq!(config.output, PathBuf::from("custom.txt"));
-        assert_eq!(config.extensions, None);
+        assert_eq!(config.include_ext, None);
+        assert_eq!(config.exclude_ext, None);
         assert_eq!(config.min_size, None);
         assert_eq!(config.max_size, None);
         assert_eq!(config.exclude_dirs, None);
@@ -40,11 +42,12 @@ mod tests {
 
     #[test]
     fn test_extensions_parsing() {
-        let args = create_commands().get_matches_from(vec!["fyai", "--ext", "txt, md, pdf"]);
+        let args =
+            create_commands().get_matches_from(vec!["fyai", "--include-ext", "txt, md, pdf"]);
         let config = config_from_matches(args).unwrap();
 
         assert_eq!(
-            config.extensions,
+            config.include_ext,
             Some(vec!["txt".to_string(), "md".to_string(), "pdf".to_string()])
         );
     }
@@ -97,10 +100,7 @@ mod tests {
         let result = config_from_matches(args);
 
         assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            "Invalid value for min_size"
-        );
+        assert_eq!(result.unwrap_err().to_string(), "Invalid min-size");
     }
 
     #[test]
@@ -109,19 +109,17 @@ mod tests {
         let result = config_from_matches(args);
 
         assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            "Invalid value for max_size"
-        );
+        assert_eq!(result.unwrap_err().to_string(), "Invalid max-size");
     }
 
     #[test]
     fn test_extensions_with_empty_and_spaces() {
-        let args = create_commands().get_matches_from(vec!["fyai", "--ext", "txt,, md ,pdf"]);
+        let args =
+            create_commands().get_matches_from(vec!["fyai", "--include-ext", "txt,, md ,pdf"]);
         let config = config_from_matches(args).unwrap();
 
         assert_eq!(
-            config.extensions,
+            config.include_ext,
             Some(vec!["txt".to_string(), "md".to_string(), "pdf".to_string()])
         );
     }

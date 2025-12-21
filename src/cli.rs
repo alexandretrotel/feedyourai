@@ -6,10 +6,14 @@ use std::path::PathBuf;
 pub struct Config {
     pub directory: PathBuf,
     pub output: PathBuf,
-    pub extensions: Option<Vec<String>>,
+    pub include_dirs: Option<Vec<String>>,
+    pub exclude_dirs: Option<Vec<String>>,
+    pub include_ext: Option<Vec<String>>,
+    pub exclude_ext: Option<Vec<String>>,
+    pub include_files: Option<Vec<String>>,
+    pub exclude_files: Option<Vec<String>>,
     pub min_size: Option<u64>,
     pub max_size: Option<u64>,
-    pub exclude_dirs: Option<Vec<String>>,
     pub tree_only: bool,
 }
 
@@ -22,43 +26,78 @@ pub fn config_from_matches(matches: clap::ArgMatches) -> io::Result<Config> {
         .get_one::<String>("output")
         .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Missing output"))?
         .into();
-    let extensions = matches.get_one::<String>("extensions").map(|ext| {
-        ext.split(',')
+
+    let include_dirs = matches.get_one::<String>("include_dirs").map(|dirs| {
+        dirs.split(',')
             .map(|s| s.trim().to_lowercase())
             .filter(|s| !s.is_empty())
             .collect::<Vec<_>>()
     });
-    let min_size = matches
-        .get_one::<String>("min_size")
-        .map(|s| {
-            s.parse::<u64>().map_err(|_| {
-                io::Error::new(io::ErrorKind::InvalidInput, "Invalid value for min_size")
-            })
-        })
-        .transpose()?;
-    let max_size = matches
-        .get_one::<String>("max_size")
-        .map(|s| {
-            s.parse::<u64>().map_err(|_| {
-                io::Error::new(io::ErrorKind::InvalidInput, "Invalid value for max_size")
-            })
-        })
-        .transpose()?;
+
     let exclude_dirs = matches.get_one::<String>("exclude_dirs").map(|dirs| {
         dirs.split(',')
             .map(|s| s.trim().to_lowercase())
             .filter(|s| !s.is_empty())
             .collect::<Vec<_>>()
     });
+
+    let include_ext = matches.get_one::<String>("include_ext").map(|ext| {
+        ext.split(',')
+            .map(|s| s.trim().to_lowercase())
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<_>>()
+    });
+
+    let exclude_ext = matches.get_one::<String>("exclude_ext").map(|ext| {
+        ext.split(',')
+            .map(|s| s.trim().to_lowercase())
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<_>>()
+    });
+
+    let include_files = matches.get_one::<String>("include_files").map(|files| {
+        files
+            .split(',')
+            .map(|s| s.trim().to_lowercase())
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<_>>()
+    });
+
+    let exclude_files = matches.get_one::<String>("exclude_files").map(|files| {
+        files
+            .split(',')
+            .map(|s| s.trim().to_lowercase())
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<_>>()
+    });
+
+    let min_size = matches
+        .get_one::<String>("min_size")
+        .map(|s| {
+            s.parse::<u64>()
+                .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "Invalid min-size"))
+        })
+        .transpose()?;
+    let max_size = matches
+        .get_one::<String>("max_size")
+        .map(|s| {
+            s.parse::<u64>()
+                .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "Invalid max-size"))
+        })
+        .transpose()?;
     let tree_only = matches.get_flag("tree_only");
 
     Ok(Config {
         directory,
         output,
-        extensions,
+        include_dirs,
+        exclude_dirs,
+        include_ext,
+        exclude_ext,
+        include_files,
+        exclude_files,
         min_size,
         max_size,
-        exclude_dirs,
         tree_only,
     })
 }
@@ -72,7 +111,7 @@ pub fn parse_args() -> io::Result<Config> {
 pub fn create_commands() -> Command {
     Command::new("fyai")
         .version(env!("CARGO_PKG_VERSION"))
-        .about("A tool to combine text files for AI processing with filtering options.")
+        .about("A tool to combine text files for AI processing with flexible filtering options.")
         .arg(
             Arg::new("directory")
                 .short('d')
@@ -90,11 +129,40 @@ pub fn create_commands() -> Command {
                 .default_value("fyai.txt"),
         )
         .arg(
-            Arg::new("extensions")
-                .short('e')
-                .long("ext")
+            Arg::new("include_dirs")
+                .long("include-dirs")
+                .value_name("DIRS")
+                .help("Comma-separated list of directories to include (e.g., src,docs)"),
+        )
+        .arg(
+            Arg::new("exclude_dirs")
+                .long("exclude-dirs")
+                .value_name("DIRS")
+                .help("Comma-separated list of directories to exclude (e.g., node_modules,dist)"),
+        )
+        .arg(
+            Arg::new("include_ext")
+                .long("include-ext")
                 .value_name("EXT")
-                .help("Comma-separated list of file extensions to exclude (e.g., txt,md)"),
+                .help("Comma-separated list of file extensions to include (e.g., txt,md)"),
+        )
+        .arg(
+            Arg::new("exclude_ext")
+                .long("exclude-ext")
+                .value_name("EXT")
+                .help("Comma-separated list of file extensions to exclude (e.g., log,tmp)"),
+        )
+        .arg(
+            Arg::new("include_files")
+                .long("include-files")
+                .value_name("FILES")
+                .help("Comma-separated list of file names to include (e.g., README.md,main.rs)"),
+        )
+        .arg(
+            Arg::new("exclude_files")
+                .long("exclude-files")
+                .value_name("FILES")
+                .help("Comma-separated list of file names to exclude (e.g., LICENSE,config.json)"),
         )
         .arg(
             Arg::new("min_size")
@@ -111,13 +179,6 @@ pub fn create_commands() -> Command {
                 .help("Exclude files larger than this size in bytes"),
         )
         .arg(
-            Arg::new("exclude_dirs")
-                .short('x')
-                .long("exclude-dirs")
-                .value_name("DIRS")
-                .help("Comma-separated list of directories to exclude (e.g., node_modules,dist)"),
-        )
-        .arg(
             clap::Arg::new("tree_only")
                 .long("tree-only")
                 .action(clap::ArgAction::SetTrue)
@@ -128,6 +189,6 @@ pub fn create_commands() -> Command {
                 .short('t')
                 .long("test")
                 .action(clap::ArgAction::SetTrue)
-                .help("Enable test mode"),
+                .help("Run in test mode"),
         )
 }

@@ -2,7 +2,7 @@
 mod tests {
     use crate::cli::Config;
     use crate::file_processing::{
-        get_directory_structure, is_in_ignored_dir, process_files, should_skip_path,
+        get_directory_structure, is_in_ignored_dir, process_files, should_skip_path_advanced,
     };
     use crate::tests::common::{create_file, setup_temp_dir, setup_test_dir};
     use ignore::gitignore::Gitignore;
@@ -108,10 +108,22 @@ mod tests {
         create_file(temp_dir.path().join("subdir/file2.txt"), "Content 2")?;
 
         let ignored_dirs = ["node_modules"];
-        let exclude_dirs = Some(vec!["subdir".to_string()]);
+        let config = Config {
+            directory: temp_dir.path().to_path_buf(),
+            output: temp_dir.path().join("output.txt"),
+            include_dirs: None,
+            exclude_dirs: Some(vec!["subdir".to_string()]),
+            include_ext: None,
+            exclude_ext: None,
+            include_files: None,
+            exclude_files: None,
+            min_size: None,
+            max_size: None,
+            tree_only: false,
+        };
         let gitignore = create_gitignore_empty();
         let structure =
-            get_directory_structure(temp_dir.path(), &gitignore, &ignored_dirs, &exclude_dirs)?;
+            get_directory_structure(temp_dir.path(), &gitignore, &ignored_dirs, &config)?;
 
         assert!(structure.contains("=== Project Directory Structure ==="));
         assert!(structure.contains("file1.txt"));
@@ -125,10 +137,22 @@ mod tests {
         let (temp_dir, gitignore) = setup_test_dir();
         let root = temp_dir.path();
         let ignored_dirs = vec![];
-        let exclude_dirs: Option<Vec<String>> = None;
 
-        let result =
-            get_directory_structure(root, &gitignore, &ignored_dirs, &exclude_dirs).unwrap();
+        let config = Config {
+            directory: root.to_path_buf(),
+            output: root.join("output.txt"),
+            include_dirs: None,
+            exclude_dirs: None,
+            include_ext: None,
+            exclude_ext: None,
+            include_files: None,
+            exclude_files: None,
+            min_size: None,
+            max_size: None,
+            tree_only: false,
+        };
+
+        let result = get_directory_structure(root, &gitignore, &ignored_dirs, &config).unwrap();
 
         assert!(result.contains("=== Project Directory Structure ==="));
         assert!(result.contains(".gitignore"));
@@ -144,10 +168,22 @@ mod tests {
         let (temp_dir, gitignore) = setup_test_dir();
         let root = temp_dir.path();
         let ignored_dirs = vec!["tests"];
-        let exclude_dirs = Some(vec!["src".to_string()]);
 
-        let result =
-            get_directory_structure(root, &gitignore, &ignored_dirs, &exclude_dirs).unwrap();
+        let config = Config {
+            directory: root.to_path_buf(),
+            output: root.join("output.txt"),
+            include_dirs: None,
+            exclude_dirs: Some(vec!["src".to_string()]),
+            include_ext: None,
+            exclude_ext: None,
+            include_files: None,
+            exclude_files: None,
+            min_size: None,
+            max_size: None,
+            tree_only: false,
+        };
+
+        let result = get_directory_structure(root, &gitignore, &ignored_dirs, &config).unwrap();
 
         assert!(result.contains("=== Project Directory Structure ==="));
         assert!(result.contains(".gitignore"));
@@ -162,10 +198,22 @@ mod tests {
         let (temp_dir, gitignore) = setup_test_dir();
         let root = temp_dir.path();
         let ignored_dirs = vec![];
-        let exclude_dirs: Option<Vec<String>> = None;
 
-        let result =
-            get_directory_structure(root, &gitignore, &ignored_dirs, &exclude_dirs).unwrap();
+        let config = Config {
+            directory: root.to_path_buf(),
+            output: root.join("output.txt"),
+            include_dirs: None,
+            exclude_dirs: None,
+            include_ext: None,
+            exclude_ext: None,
+            include_files: None,
+            exclude_files: None,
+            min_size: None,
+            max_size: None,
+            tree_only: false,
+        };
+
+        let result = get_directory_structure(root, &gitignore, &ignored_dirs, &config).unwrap();
 
         // Verify that target/ directory is ignored due to .gitignore
         assert!(!result.contains("target/"));
@@ -177,10 +225,22 @@ mod tests {
         let root = temp_dir.path();
         let gitignore = Gitignore::empty();
         let ignored_dirs = vec![];
-        let exclude_dirs: Option<Vec<String>> = None;
 
-        let result =
-            get_directory_structure(root, &gitignore, &ignored_dirs, &exclude_dirs).unwrap();
+        let config = Config {
+            directory: root.to_path_buf(),
+            output: root.join("output.txt"),
+            include_dirs: None,
+            exclude_dirs: None,
+            include_ext: None,
+            exclude_ext: None,
+            include_files: None,
+            exclude_files: None,
+            min_size: None,
+            max_size: None,
+            tree_only: false,
+        };
+
+        let result = get_directory_structure(root, &gitignore, &ignored_dirs, &config).unwrap();
 
         assert!(result.contains("=== Project Directory Structure ==="));
         assert!(result.contains("The directory is empty."));
@@ -197,10 +257,21 @@ mod tests {
 
         let gitignore = Gitignore::empty();
         let ignored_dirs = vec![];
-        let exclude_dirs = Some(vec!["core".to_string()]);
+        let config = Config {
+            directory: root.to_path_buf(),
+            output: root.join("output.txt"),
+            include_dirs: None,
+            exclude_dirs: Some(vec!["core".to_string()]),
+            include_ext: None,
+            exclude_ext: None,
+            include_files: None,
+            exclude_files: None,
+            min_size: None,
+            max_size: None,
+            tree_only: false,
+        };
 
-        let result =
-            get_directory_structure(root, &gitignore, &ignored_dirs, &exclude_dirs).unwrap();
+        let result = get_directory_structure(root, &gitignore, &ignored_dirs, &config).unwrap();
 
         assert!(result.contains("=== Project Directory Structure ==="));
         assert!(result.contains("src/"));
@@ -214,9 +285,21 @@ mod tests {
         let root = Path::new("/non/existent/path");
         let gitignore = Gitignore::empty();
         let ignored_dirs = vec![];
-        let exclude_dirs: Option<Vec<String>> = None;
+        let config = Config {
+            directory: root.to_path_buf(),
+            output: root.join("output.txt"),
+            include_dirs: None,
+            exclude_dirs: None,
+            include_ext: None,
+            exclude_ext: None,
+            include_files: None,
+            exclude_files: None,
+            min_size: None,
+            max_size: None,
+            tree_only: false,
+        };
 
-        let result = get_directory_structure(root, &gitignore, &ignored_dirs, &exclude_dirs);
+        let result = get_directory_structure(root, &gitignore, &ignored_dirs, &config);
         assert!(result.is_err());
     }
 
@@ -229,21 +312,21 @@ mod tests {
         let config = Config {
             directory: temp_dir.path().to_path_buf(),
             output: temp_dir.path().join("output.txt"),
-            extensions: None,
+            include_dirs: None,
+            exclude_dirs: None,
+            include_ext: None,
+            exclude_ext: None,
+            include_files: None,
+            exclude_files: None,
             min_size: Some(0),
             max_size: None,
-            exclude_dirs: None,
             tree_only: false,
         };
 
         let ignored_dirs = ["node_modules"];
         let gitignore = create_gitignore_empty();
-        let dir_structure = get_directory_structure(
-            temp_dir.path(),
-            &gitignore,
-            &ignored_dirs,
-            &config.exclude_dirs,
-        )?;
+        let dir_structure =
+            get_directory_structure(temp_dir.path(), &gitignore, &ignored_dirs, &config)?;
         process_files(&config, &gitignore, &dir_structure, &ignored_dirs)?;
 
         let output_content = fs::read_to_string(&config.output)?;
@@ -263,21 +346,21 @@ mod tests {
         let config = Config {
             directory: temp_dir.path().to_path_buf(),
             output: temp_dir.path().join("output.txt"),
-            extensions: None,
+            include_dirs: None,
+            exclude_dirs: None,
+            include_ext: None,
+            exclude_ext: None,
+            include_files: None,
+            exclude_files: None,
             min_size: Some(10000),
             max_size: Some(100000),
-            exclude_dirs: None,
             tree_only: false,
         };
 
         let ignored_dirs = ["node_modules"];
         let gitignore = create_gitignore_empty();
-        let dir_structure = get_directory_structure(
-            temp_dir.path(),
-            &gitignore,
-            &ignored_dirs,
-            &config.exclude_dirs,
-        )?;
+        let dir_structure =
+            get_directory_structure(temp_dir.path(), &gitignore, &ignored_dirs, &config)?;
         process_files(&config, &gitignore, &dir_structure, &ignored_dirs)?;
 
         let output_content = fs::read_to_string(&config.output)?;
@@ -299,21 +382,21 @@ mod tests {
         let config = Config {
             directory: temp_dir.path().to_path_buf(),
             output: temp_dir.path().join("output.txt"),
-            extensions: None,
+            include_dirs: None,
+            exclude_dirs: None,
+            include_ext: None,
+            exclude_ext: None,
+            include_files: None,
+            exclude_files: None,
             min_size: Some(0),
             max_size: None,
-            exclude_dirs: None,
             tree_only: false,
         };
 
         let ignored_dirs = ["node_modules"];
         let gitignore = create_gitignore_empty();
-        let dir_structure = get_directory_structure(
-            temp_dir.path(),
-            &gitignore,
-            &ignored_dirs,
-            &config.exclude_dirs,
-        )?;
+        let dir_structure =
+            get_directory_structure(temp_dir.path(), &gitignore, &ignored_dirs, &config)?;
         process_files(&config, &gitignore, &dir_structure, &ignored_dirs)?;
 
         // Output should not include non-UTF-8 file content
@@ -329,53 +412,65 @@ mod tests {
     fn test_should_skip_path_ignored_dirs() {
         let gitignore = create_gitignore_empty();
         let ignored_dirs = ["node_modules", ".git", "target"];
-        let exclude_dirs: Option<Vec<String>> = None;
+        let config = Config {
+            directory: PathBuf::from("."),
+            output: PathBuf::from("out.txt"),
+            include_dirs: None,
+            exclude_dirs: None,
+            include_ext: None,
+            exclude_ext: None,
+            include_files: None,
+            exclude_files: None,
+            min_size: None,
+            max_size: None,
+            tree_only: false,
+        };
 
         // Test directory paths that should be skipped
         let path = Path::new("project/node_modules");
-        assert!(should_skip_path(
+        assert!(should_skip_path_advanced(
             path,
             true,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
 
         let path = Path::new("project/.git/config");
-        assert!(should_skip_path(
+        assert!(should_skip_path_advanced(
             path,
             false,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
 
         let path = Path::new("rust_project/target/debug/main");
-        assert!(should_skip_path(
+        assert!(should_skip_path_advanced(
             path,
             false,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
 
         // Test paths that should not be skipped
         let path = Path::new("project/src/main.rs");
-        assert!(!should_skip_path(
+        assert!(!should_skip_path_advanced(
             path,
             false,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
 
         let path = Path::new("project/README.md");
-        assert!(!should_skip_path(
+        assert!(!should_skip_path_advanced(
             path,
             false,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
     }
 
@@ -383,35 +478,47 @@ mod tests {
     fn test_should_skip_path_exclude_dirs() {
         let gitignore = create_gitignore_empty();
         let ignored_dirs: Vec<&str> = vec![];
-        let exclude_dirs = Some(vec!["tests".to_string(), "docs".to_string()]);
+        let config = Config {
+            directory: PathBuf::from("."),
+            output: PathBuf::from("out.txt"),
+            include_dirs: None,
+            exclude_dirs: Some(vec!["tests".to_string(), "docs".to_string()]),
+            include_ext: None,
+            exclude_ext: None,
+            include_files: None,
+            exclude_files: None,
+            min_size: None,
+            max_size: None,
+            tree_only: false,
+        };
 
         // Test directory paths that should be skipped due to exclude_dirs
         let path = Path::new("project/tests/unit_test.rs");
-        assert!(should_skip_path(
+        assert!(should_skip_path_advanced(
             path,
             false,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
 
         let path = Path::new("project/docs/README.md");
-        assert!(should_skip_path(
+        assert!(should_skip_path_advanced(
             path,
             false,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
 
         // Test paths that should not be skipped
         let path = Path::new("project/src/main.rs");
-        assert!(!should_skip_path(
+        assert!(!should_skip_path_advanced(
             path,
             false,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
     }
 
@@ -419,44 +526,56 @@ mod tests {
     fn test_should_skip_path_case_insensitive() {
         let gitignore = create_gitignore_empty();
         let ignored_dirs = ["node_modules"];
-        let exclude_dirs = Some(vec!["Tests".to_string()]);
+        let config = Config {
+            directory: PathBuf::from("."),
+            output: PathBuf::from("out.txt"),
+            include_dirs: None,
+            exclude_dirs: Some(vec!["Tests".to_string()]),
+            include_ext: None,
+            exclude_ext: None,
+            include_files: None,
+            exclude_files: None,
+            min_size: None,
+            max_size: None,
+            tree_only: false,
+        };
 
         // Test case insensitive matching for ignored_dirs
         let path = Path::new("project/NODE_MODULES/package");
-        assert!(should_skip_path(
+        assert!(should_skip_path_advanced(
             path,
             true,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
 
         let path = Path::new("project/Node_Modules/package");
-        assert!(should_skip_path(
+        assert!(should_skip_path_advanced(
             path,
             true,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
 
         // Test case insensitive matching for exclude_dirs
         let path = Path::new("project/tests/unit.rs");
-        assert!(should_skip_path(
+        assert!(should_skip_path_advanced(
             path,
             false,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
 
         let path = Path::new("project/TESTS/integration.rs");
-        assert!(should_skip_path(
+        assert!(should_skip_path_advanced(
             path,
             false,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
     }
 
@@ -471,53 +590,65 @@ mod tests {
         let gitignore = Gitignore::new(root.join(".gitignore")).0;
 
         let ignored_dirs: Vec<&str> = vec![];
-        let exclude_dirs: Option<Vec<String>> = None;
+        let config = Config {
+            directory: PathBuf::from("."),
+            output: PathBuf::from("out.txt"),
+            include_dirs: None,
+            exclude_dirs: None,
+            include_ext: None,
+            exclude_ext: None,
+            include_files: None,
+            exclude_files: None,
+            min_size: None,
+            max_size: None,
+            tree_only: false,
+        };
 
         // Test files that should be skipped due to gitignore rules
         let path = root.join("app.log");
-        assert!(should_skip_path(
+        assert!(should_skip_path_advanced(
             &path,
             false,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
 
         let path = root.join("build");
-        assert!(should_skip_path(
+        assert!(should_skip_path_advanced(
             &path,
             true,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
 
         let path = root.join("tmp");
-        assert!(should_skip_path(
+        assert!(should_skip_path_advanced(
             &path,
             true,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
 
         // Test files that should not be skipped
         let path = root.join("src/main.rs");
-        assert!(!should_skip_path(
+        assert!(!should_skip_path_advanced(
             &path,
             false,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
 
         let path = root.join("README.md");
-        assert!(!should_skip_path(
+        assert!(!should_skip_path_advanced(
             &path,
             false,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
 
         Ok(())
@@ -534,56 +665,68 @@ mod tests {
         let gitignore = Gitignore::new(root.join(".gitignore")).0;
 
         let ignored_dirs = ["node_modules", ".git"];
-        let exclude_dirs = Some(vec!["tests".to_string()]);
+        let config = Config {
+            directory: PathBuf::from("."),
+            output: PathBuf::from("out.txt"),
+            include_dirs: None,
+            exclude_dirs: Some(vec!["tests".to_string()]),
+            include_ext: None,
+            exclude_ext: None,
+            include_files: None,
+            exclude_files: None,
+            min_size: None,
+            max_size: None,
+            tree_only: false,
+        };
 
         // Test path that matches multiple rules (should be skipped)
         let path = root.join("node_modules/package.tmp");
-        assert!(should_skip_path(
+        assert!(should_skip_path_advanced(
             &path,
             false,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
 
         // Test path that matches gitignore only
         let path = root.join("src/cache.tmp");
-        assert!(should_skip_path(
+        assert!(should_skip_path_advanced(
             &path,
             false,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
 
         // Test path that matches ignored_dirs only
         let path = root.join("node_modules/package.json");
-        assert!(should_skip_path(
+        assert!(should_skip_path_advanced(
             &path,
             false,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
 
         // Test path that matches exclude_dirs only
         let path = root.join("tests/unit.rs");
-        assert!(should_skip_path(
+        assert!(should_skip_path_advanced(
             &path,
             false,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
 
         // Test path that doesn't match any rule
         let path = root.join("src/main.rs");
-        assert!(!should_skip_path(
+        assert!(!should_skip_path_advanced(
             &path,
             false,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
 
         Ok(())
@@ -593,34 +736,46 @@ mod tests {
     fn test_should_skip_path_empty_rules() {
         let gitignore = create_gitignore_empty();
         let ignored_dirs: Vec<&str> = vec![];
-        let exclude_dirs: Option<Vec<String>> = None;
+        let config = Config {
+            directory: PathBuf::from("."),
+            output: PathBuf::from("out.txt"),
+            include_dirs: None,
+            exclude_dirs: None,
+            include_ext: None,
+            exclude_ext: None,
+            include_files: None,
+            exclude_files: None,
+            min_size: None,
+            max_size: None,
+            tree_only: false,
+        };
 
         // When no rules are defined, no paths should be skipped
         let path = Path::new("any/path/file.txt");
-        assert!(!should_skip_path(
+        assert!(!should_skip_path_advanced(
             path,
             false,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
 
         let path = Path::new(".git/config");
-        assert!(!should_skip_path(
+        assert!(!should_skip_path_advanced(
             path,
             false,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
 
         let path = Path::new("node_modules/package.json");
-        assert!(!should_skip_path(
+        assert!(!should_skip_path_advanced(
             path,
             false,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
     }
 
@@ -628,37 +783,49 @@ mod tests {
     fn test_should_skip_path_file_vs_directory() {
         let gitignore = create_gitignore_empty();
         let ignored_dirs = ["target"];
-        let exclude_dirs: Option<Vec<String>> = None;
+        let config = Config {
+            directory: PathBuf::from("."),
+            output: PathBuf::from("out.txt"),
+            include_dirs: None,
+            exclude_dirs: Some(vec!["target".to_string()]),
+            include_ext: None,
+            exclude_ext: None,
+            include_files: None,
+            exclude_files: None,
+            min_size: None,
+            max_size: None,
+            tree_only: false,
+        };
 
         // Test the same path as both file and directory
         let path = Path::new("project/target");
 
         // As a directory, it should be skipped
-        assert!(should_skip_path(
+        assert!(should_skip_path_advanced(
             path,
             true,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
 
         // As a file, it should also be skipped (because it's in the ignored directory)
-        assert!(should_skip_path(
+        assert!(should_skip_path_advanced(
             path,
             false,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
 
         // Test a file inside the ignored directory
         let path = Path::new("project/target/debug/main");
-        assert!(should_skip_path(
+        assert!(should_skip_path_advanced(
             path,
             false,
             &gitignore,
             &ignored_dirs,
-            &exclude_dirs
+            &config
         ));
     }
 }

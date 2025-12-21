@@ -40,10 +40,14 @@ mod tests {
             result: Ok(cli::Config {
                 directory: temp_dir.path().to_path_buf(),
                 output: temp_output.clone(),
-                extensions: vec![].into(),
+                include_dirs: None,
+                exclude_dirs: None,
+                include_ext: None,
+                exclude_ext: None,
+                include_files: None,
+                exclude_files: None,
                 min_size: Some(0),
                 max_size: Some(1024),
-                exclude_dirs: None,
                 tree_only: false,
             }),
         };
@@ -52,13 +56,9 @@ mod tests {
         let result = mock_cli.parse_args().and_then(|config| {
             // Use real implementations for other dependencies or mock them similarly
             let gitignore =
-                build_gitignore(&config.directory, &IGNORED_FILES, &IGNORED_DIRS, &None)?;
-            let dir_structure = get_directory_structure(
-                &config.directory,
-                &gitignore,
-                &IGNORED_DIRS,
-                &config.exclude_dirs,
-            )?;
+                build_gitignore(&config.directory, &IGNORED_FILES, &IGNORED_DIRS, &config)?;
+            let dir_structure =
+                get_directory_structure(&config.directory, &gitignore, &IGNORED_DIRS, &config)?;
             process_files(&config, &gitignore, &dir_structure, IGNORED_DIRS)?;
             copy_to_clipboard(&config.output)?;
             Ok(())

@@ -18,19 +18,10 @@ mod gitignore;
 fn main() -> io::Result<()> {
     let config = parse_args()?;
 
-    let gitignore = build_gitignore(
-        &config.directory,
-        IGNORED_FILES,
-        IGNORED_DIRS,
-        &config.exclude_dirs,
-    )?;
+    let gitignore = build_gitignore(&config.directory, IGNORED_FILES, IGNORED_DIRS, &config)?;
 
-    let dir_structure = get_directory_structure(
-        &config.directory,
-        &gitignore,
-        IGNORED_DIRS,
-        &config.exclude_dirs,
-    )?;
+    let dir_structure =
+        get_directory_structure(&config.directory, &gitignore, IGNORED_DIRS, &config)?;
 
     if config.tree_only {
         std::fs::write(&config.output, &dir_structure)?;

@@ -8,8 +8,8 @@ pub fn copy_to_clipboard(output_path: &Path) -> io::Result<()> {
     let mut output_contents = String::new();
     File::open(output_path)?.read_to_string(&mut output_contents)?;
 
-    let mut clipboard: ClipboardContext = ClipboardProvider::new()
-        .map_err(|e| Error::other(format!("Clipboard error: {}", e)))?;
+    let mut clipboard: ClipboardContext =
+        ClipboardProvider::new().map_err(|e| Error::other(format!("Clipboard error: {}", e)))?;
 
     clipboard
         .set_contents(output_contents)
