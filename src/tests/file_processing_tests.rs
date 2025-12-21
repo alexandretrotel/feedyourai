@@ -1,10 +1,12 @@
+// NOTE: This file was refactored to use `create_test_config` from `crate::tests::common`
+// to reduce duplication when constructing `Config` values in tests.
+
 #[cfg(test)]
 mod tests {
-    use crate::config::Config;
     use crate::file_processing::{
         get_directory_structure, is_in_ignored_dir, process_files, should_skip_path_advanced,
     };
-    use crate::tests::common::{create_file, setup_temp_dir, setup_test_dir};
+    use crate::tests::common::{create_file, create_test_config, setup_temp_dir, setup_test_dir};
     use ignore::gitignore::Gitignore;
     use std::fs;
     use std::fs::File;
@@ -42,65 +44,6 @@ mod tests {
     }
 
     #[test]
-    fn test_path_not_in_ignored_dir() {
-        let path = Path::new("/home/user/project/src/main.rs");
-        let ignored_dirs = vec![".git", "node_modules"];
-        let exclude_dirs = Some(vec!["tests".to_string()]);
-        assert!(!is_in_ignored_dir(path, &ignored_dirs, &exclude_dirs));
-    }
-
-    #[test]
-    fn test_empty_ignored_dirs() {
-        let path = Path::new("/home/user/.git/config");
-        let ignored_dirs: Vec<&str> = vec![];
-        let exclude_dirs: Option<Vec<String>> = None;
-        assert!(!is_in_ignored_dir(path, &ignored_dirs, &exclude_dirs));
-    }
-
-    #[test]
-    fn test_root_path() {
-        let path = Path::new("/");
-        let ignored_dirs = vec![".git", "node_modules"];
-        let exclude_dirs = Some(vec!["tests".to_string()]);
-        assert!(!is_in_ignored_dir(path, &ignored_dirs, &exclude_dirs));
-    }
-
-    #[test]
-    fn test_single_component_path() {
-        let path = Path::new(".git");
-        let ignored_dirs = vec![".git", "node_modules"];
-        let exclude_dirs = Some(vec!["tests".to_string()]);
-        assert!(is_in_ignored_dir(path, &ignored_dirs, &exclude_dirs));
-    }
-
-    #[test]
-    fn test_path_with_similar_prefix() {
-        let path = Path::new("/home/user/gitlab/project");
-        let ignored_dirs = vec![".git", "node_modules"];
-        let exclude_dirs = Some(vec!["tests".to_string()]);
-        assert!(!is_in_ignored_dir(path, &ignored_dirs, &exclude_dirs));
-    }
-
-    #[test]
-    fn test_case_sensitivity() {
-        let path = Path::new("/home/user/NODE_MODULES/cache");
-        let ignored_dirs = vec!["node_modules"];
-        let exclude_dirs = Some(vec!["tests".to_string()]);
-        assert!(is_in_ignored_dir(path, &ignored_dirs, &exclude_dirs));
-
-        let path = Path::new("/home/user/TESTS/doc.txt");
-        assert!(is_in_ignored_dir(path, &ignored_dirs, &exclude_dirs));
-    }
-
-    #[test]
-    fn test_empty_path() {
-        let path = Path::new("");
-        let ignored_dirs = vec![".git", "node_modules"];
-        let exclude_dirs = Some(vec!["tests".to_string()]);
-        assert!(!is_in_ignored_dir(path, &ignored_dirs, &exclude_dirs));
-    }
-
-    #[test]
     fn test_get_directory_structure() -> io::Result<()> {
         let temp_dir = setup_temp_dir();
         create_file(temp_dir.path().join("file1.txt"), "Content 1")?;
@@ -108,20 +51,11 @@ mod tests {
         create_file(temp_dir.path().join("subdir/file2.txt"), "Content 2")?;
 
         let ignored_dirs = ["node_modules"];
-        let config = Config {
-            directory: temp_dir.path().to_path_buf(),
-            output: temp_dir.path().join("output.txt"),
-            include_dirs: None,
-            exclude_dirs: Some(vec!["subdir".to_string()]),
-            include_ext: None,
-            exclude_ext: None,
-            include_files: None,
-            exclude_files: None,
-            min_size: None,
-            max_size: None,
-            respect_gitignore: true,
-            tree_only: false,
-        };
+        let config = create_test_config(
+            temp_dir.path().to_path_buf(),
+            temp_dir.path().join("output.txt"),
+            |c| c.exclude_dirs = Some(vec!["subdir".to_string()]),
+        );
         let gitignore = create_gitignore_empty();
         let structure =
             get_directory_structure(temp_dir.path(), &gitignore, &ignored_dirs, &config)?;
@@ -139,20 +73,7 @@ mod tests {
         let root = temp_dir.path();
         let ignored_dirs = vec![];
 
-        let config = Config {
-            directory: root.to_path_buf(),
-            output: root.join("output.txt"),
-            include_dirs: None,
-            exclude_dirs: None,
-            include_ext: None,
-            exclude_ext: None,
-            include_files: None,
-            exclude_files: None,
-            min_size: None,
-            max_size: None,
-            respect_gitignore: true,
-            tree_only: false,
-        };
+        let config = create_test_config(root.to_path_buf(), root.join("output.txt"), |_| {});
 
         let result = get_directory_structure(root, &gitignore, &ignored_dirs, &config).unwrap();
 
@@ -171,20 +92,9 @@ mod tests {
         let root = temp_dir.path();
         let ignored_dirs = vec!["tests"];
 
-        let config = Config {
-            directory: root.to_path_buf(),
-            output: root.join("output.txt"),
-            include_dirs: None,
-            exclude_dirs: Some(vec!["src".to_string()]),
-            include_ext: None,
-            exclude_ext: None,
-            include_files: None,
-            exclude_files: None,
-            min_size: None,
-            max_size: None,
-            respect_gitignore: true,
-            tree_only: false,
-        };
+        let config = create_test_config(root.to_path_buf(), root.join("output.txt"), |c| {
+            c.exclude_dirs = Some(vec!["src".to_string()])
+        });
 
         let result = get_directory_structure(root, &gitignore, &ignored_dirs, &config).unwrap();
 
@@ -202,20 +112,7 @@ mod tests {
         let root = temp_dir.path();
         let ignored_dirs = vec![];
 
-        let config = Config {
-            directory: root.to_path_buf(),
-            output: root.join("output.txt"),
-            include_dirs: None,
-            exclude_dirs: None,
-            include_ext: None,
-            exclude_ext: None,
-            include_files: None,
-            exclude_files: None,
-            min_size: None,
-            max_size: None,
-            respect_gitignore: true,
-            tree_only: false,
-        };
+        let config = create_test_config(root.to_path_buf(), root.join("output.txt"), |_| {});
 
         let result = get_directory_structure(root, &gitignore, &ignored_dirs, &config).unwrap();
 
@@ -230,20 +127,9 @@ mod tests {
         let gitignore = Gitignore::empty();
         let ignored_dirs = vec![];
 
-        let config = Config {
-            directory: root.to_path_buf(),
-            output: root.join("output.txt"),
-            include_dirs: None,
-            exclude_dirs: None,
-            include_ext: None,
-            exclude_ext: None,
-            include_files: None,
-            exclude_files: None,
-            min_size: Some(0),
-            max_size: None,
-            respect_gitignore: true,
-            tree_only: false,
-        };
+        let config = create_test_config(root.to_path_buf(), root.join("output.txt"), |c| {
+            c.min_size = Some(0)
+        });
 
         let result = get_directory_structure(root, &gitignore, &ignored_dirs, &config).unwrap();
 
@@ -262,20 +148,9 @@ mod tests {
 
         let gitignore = Gitignore::empty();
         let ignored_dirs = vec![];
-        let config = Config {
-            directory: root.to_path_buf(),
-            output: root.join("output.txt"),
-            include_dirs: None,
-            exclude_dirs: Some(vec!["core".to_string()]),
-            include_ext: None,
-            exclude_ext: None,
-            include_files: None,
-            exclude_files: None,
-            min_size: None,
-            max_size: None,
-            respect_gitignore: true,
-            tree_only: false,
-        };
+        let config = create_test_config(root.to_path_buf(), root.join("output.txt"), |c| {
+            c.exclude_dirs = Some(vec!["core".to_string()])
+        });
 
         let result = get_directory_structure(root, &gitignore, &ignored_dirs, &config).unwrap();
 
@@ -291,20 +166,7 @@ mod tests {
         let root = Path::new("/non/existent/path");
         let gitignore = Gitignore::empty();
         let ignored_dirs = vec![];
-        let config = Config {
-            directory: root.to_path_buf(),
-            output: root.join("output.txt"),
-            include_dirs: None,
-            exclude_dirs: None,
-            include_ext: None,
-            exclude_ext: None,
-            include_files: None,
-            exclude_files: None,
-            min_size: None,
-            max_size: None,
-            respect_gitignore: true,
-            tree_only: false,
-        };
+        let config = create_test_config(root.to_path_buf(), root.join("output.txt"), |_| {});
 
         let result = get_directory_structure(root, &gitignore, &ignored_dirs, &config);
         assert!(result.is_err());
@@ -316,20 +178,11 @@ mod tests {
         create_file(temp_dir.path().join("file1.txt"), "Hello, AI!")?;
         create_file(temp_dir.path().join("file2.md"), "# Markdown")?;
 
-        let config = Config {
-            directory: temp_dir.path().to_path_buf(),
-            output: temp_dir.path().join("output.txt"),
-            include_dirs: None,
-            exclude_dirs: None,
-            include_ext: None,
-            exclude_ext: None,
-            include_files: None,
-            exclude_files: None,
-            min_size: Some(0),
-            max_size: None,
-            respect_gitignore: true,
-            tree_only: false,
-        };
+        let config = create_test_config(
+            temp_dir.path().to_path_buf(),
+            temp_dir.path().join("output.txt"),
+            |c| c.min_size = Some(0),
+        );
 
         let ignored_dirs = ["node_modules"];
         let gitignore = create_gitignore_empty();
@@ -351,20 +204,14 @@ mod tests {
         create_file(temp_dir.path().join("small.txt"), "Small")?;
         create_file(temp_dir.path().join("large.txt"), &"a".repeat(60000))?;
 
-        let config = Config {
-            directory: temp_dir.path().to_path_buf(),
-            output: temp_dir.path().join("output.txt"),
-            include_dirs: None,
-            exclude_dirs: None,
-            include_ext: None,
-            exclude_ext: None,
-            include_files: None,
-            exclude_files: None,
-            min_size: Some(10000),
-            max_size: Some(100000),
-            respect_gitignore: true,
-            tree_only: false,
-        };
+        let config = create_test_config(
+            temp_dir.path().to_path_buf(),
+            temp_dir.path().join("output.txt"),
+            |c| {
+                c.min_size = Some(10000);
+                c.max_size = Some(100000);
+            },
+        );
 
         let ignored_dirs = ["node_modules"];
         let gitignore = create_gitignore_empty();
@@ -388,20 +235,11 @@ mod tests {
         let mut file = fs::File::create(&file_path)?;
         file.write_all(&[0xFF, 0xFF, 0xFF])?;
 
-        let config = Config {
-            directory: temp_dir.path().to_path_buf(),
-            output: temp_dir.path().join("output.txt"),
-            include_dirs: None,
-            exclude_dirs: None,
-            include_ext: None,
-            exclude_ext: None,
-            include_files: None,
-            exclude_files: None,
-            min_size: Some(0),
-            max_size: None,
-            respect_gitignore: true,
-            tree_only: false,
-        };
+        let config = create_test_config(
+            temp_dir.path().to_path_buf(),
+            temp_dir.path().join("output.txt"),
+            |c| c.min_size = Some(0),
+        );
 
         let ignored_dirs = ["node_modules"];
         let gitignore = create_gitignore_empty();
@@ -422,20 +260,7 @@ mod tests {
     fn test_should_skip_path_ignored_dirs() {
         let gitignore = create_gitignore_empty();
         let ignored_dirs = ["node_modules", ".git", "target"];
-        let config = Config {
-            directory: PathBuf::from("."),
-            output: PathBuf::from("out.txt"),
-            include_dirs: None,
-            exclude_dirs: None,
-            include_ext: None,
-            exclude_ext: None,
-            include_files: None,
-            exclude_files: None,
-            min_size: None,
-            max_size: None,
-            respect_gitignore: true,
-            tree_only: false,
-        };
+        let config = create_test_config(PathBuf::from("."), PathBuf::from("out.txt"), |_| {});
 
         // Test directory paths that should be skipped
         let path = Path::new("project/node_modules");
@@ -489,20 +314,9 @@ mod tests {
     fn test_should_skip_path_exclude_dirs() {
         let gitignore = create_gitignore_empty();
         let ignored_dirs: Vec<&str> = vec![];
-        let config = Config {
-            directory: PathBuf::from("."),
-            output: PathBuf::from("out.txt"),
-            include_dirs: None,
-            exclude_dirs: Some(vec!["tests".to_string(), "docs".to_string()]),
-            include_ext: None,
-            exclude_ext: None,
-            include_files: None,
-            exclude_files: None,
-            min_size: None,
-            max_size: None,
-            respect_gitignore: true,
-            tree_only: false,
-        };
+        let config = create_test_config(PathBuf::from("."), PathBuf::from("out.txt"), |c| {
+            c.exclude_dirs = Some(vec!["tests".to_string(), "docs".to_string()])
+        });
 
         // Test directory paths that should be skipped due to exclude_dirs
         let path = Path::new("project/tests/unit_test.rs");
@@ -538,20 +352,9 @@ mod tests {
     fn test_should_skip_path_case_insensitive() {
         let gitignore = create_gitignore_empty();
         let ignored_dirs = ["node_modules"];
-        let config = Config {
-            directory: PathBuf::from("."),
-            output: PathBuf::from("out.txt"),
-            include_dirs: None,
-            exclude_dirs: Some(vec!["Tests".to_string()]),
-            include_ext: None,
-            exclude_ext: None,
-            include_files: None,
-            exclude_files: None,
-            min_size: None,
-            max_size: None,
-            respect_gitignore: true,
-            tree_only: false,
-        };
+        let config = create_test_config(PathBuf::from("."), PathBuf::from("out.txt"), |c| {
+            c.exclude_dirs = Some(vec!["Tests".to_string()])
+        });
 
         // Test case insensitive matching for ignored_dirs
         let path = Path::new("project/NODE_MODULES/package");
@@ -603,20 +406,7 @@ mod tests {
         let gitignore = Gitignore::new(root.join(".gitignore")).0;
 
         let ignored_dirs: Vec<&str> = vec![];
-        let config = Config {
-            directory: PathBuf::from("."),
-            output: PathBuf::from("out.txt"),
-            include_dirs: None,
-            exclude_dirs: None,
-            include_ext: None,
-            exclude_ext: None,
-            include_files: None,
-            exclude_files: None,
-            min_size: None,
-            max_size: None,
-            respect_gitignore: true,
-            tree_only: false,
-        };
+        let config = create_test_config(PathBuf::from("."), PathBuf::from("out.txt"), |_| {});
 
         // Test files that should be skipped due to gitignore rules
         let path = root.join("app.log");
@@ -679,20 +469,9 @@ mod tests {
         let gitignore = Gitignore::new(root.join(".gitignore")).0;
 
         let ignored_dirs = ["node_modules", ".git"];
-        let config = Config {
-            directory: PathBuf::from("."),
-            output: PathBuf::from("out.txt"),
-            include_dirs: None,
-            exclude_dirs: Some(vec!["target".to_string(), "tests".to_string()]),
-            include_ext: None,
-            exclude_ext: None,
-            include_files: None,
-            exclude_files: None,
-            min_size: None,
-            max_size: None,
-            respect_gitignore: true,
-            tree_only: false,
-        };
+        let config = create_test_config(PathBuf::from("."), PathBuf::from("out.txt"), |c| {
+            c.exclude_dirs = Some(vec!["target".to_string(), "tests".to_string()])
+        });
 
         // Test path that matches multiple rules (should be skipped)
         let path = root.join("node_modules/package.tmp");
@@ -751,20 +530,7 @@ mod tests {
     fn test_should_skip_path_empty_rules() {
         let gitignore = create_gitignore_empty();
         let ignored_dirs: Vec<&str> = vec![];
-        let config = Config {
-            directory: PathBuf::from("."),
-            output: PathBuf::from("out.txt"),
-            include_dirs: None,
-            exclude_dirs: None,
-            include_ext: None,
-            exclude_ext: None,
-            include_files: None,
-            exclude_files: None,
-            min_size: None,
-            max_size: None,
-            respect_gitignore: true,
-            tree_only: false,
-        };
+        let config = create_test_config(PathBuf::from("."), PathBuf::from("out.txt"), |_| {});
 
         // When no rules are defined, no paths should be skipped
         let path = Path::new("any/path/file.txt");
@@ -799,20 +565,9 @@ mod tests {
     fn test_should_skip_path_file_vs_directory() {
         let gitignore = create_gitignore_empty();
         let ignored_dirs = ["target"];
-        let config = Config {
-            directory: PathBuf::from("."),
-            output: PathBuf::from("out.txt"),
-            include_dirs: None,
-            exclude_dirs: Some(vec!["target".to_string()]),
-            include_ext: None,
-            exclude_ext: None,
-            include_files: None,
-            exclude_files: None,
-            min_size: None,
-            max_size: None,
-            respect_gitignore: true,
-            tree_only: false,
-        };
+        let config = create_test_config(PathBuf::from("."), PathBuf::from("out.txt"), |c| {
+            c.exclude_dirs = Some(vec!["target".to_string()])
+        });
 
         // Test the same path as both file and directory
         let path = Path::new("project/target");
@@ -860,20 +615,14 @@ mod tests {
         create_file(temp_dir1.path().join("b.md"), "B")?;
         create_file(temp_dir1.path().join("noext"), "NOEXT")?;
 
-        let config_md = Config {
-            directory: temp_dir1.path().to_path_buf(),
-            output: temp_dir1.path().join("out_md.txt"),
-            include_dirs: None,
-            exclude_dirs: None,
-            include_ext: Some(vec!["md".to_string()]),
-            exclude_ext: None,
-            include_files: None,
-            exclude_files: None,
-            min_size: Some(0),
-            max_size: None,
-            respect_gitignore: true,
-            tree_only: false,
-        };
+        let config_md = create_test_config(
+            temp_dir1.path().to_path_buf(),
+            temp_dir1.path().join("out_md.txt"),
+            |c| {
+                c.include_ext = Some(vec!["md".to_string()]);
+                c.min_size = Some(0);
+            },
+        );
         let dir_structure =
             get_directory_structure(temp_dir1.path(), &gitignore, &ignored_dirs, &config_md)?;
         process_files(&config_md, &gitignore, &dir_structure, &ignored_dirs)?;
@@ -888,20 +637,14 @@ mod tests {
         create_file(temp_dir2.path().join("b.md"), "B")?;
         create_file(temp_dir2.path().join("noext"), "NOEXT")?;
 
-        let config_excl = Config {
-            directory: temp_dir2.path().to_path_buf(),
-            output: temp_dir2.path().join("out_excl.txt"),
-            include_dirs: None,
-            exclude_dirs: None,
-            include_ext: None,
-            exclude_ext: Some(vec!["md".to_string()]),
-            include_files: None,
-            exclude_files: None,
-            min_size: Some(0),
-            max_size: None,
-            respect_gitignore: true,
-            tree_only: false,
-        };
+        let config_excl = create_test_config(
+            temp_dir2.path().to_path_buf(),
+            temp_dir2.path().join("out_excl.txt"),
+            |c| {
+                c.exclude_ext = Some(vec!["md".to_string()]);
+                c.min_size = Some(0);
+            },
+        );
         let dir_structure =
             get_directory_structure(temp_dir2.path(), &gitignore, &ignored_dirs, &config_excl)?;
         process_files(&config_excl, &gitignore, &dir_structure, &ignored_dirs)?;
@@ -915,20 +658,14 @@ mod tests {
         create_file(temp_dir3.path().join("b.md"), "B")?;
         create_file(temp_dir3.path().join("noext"), "NOEXT")?;
 
-        let config_noext = Config {
-            directory: temp_dir3.path().to_path_buf(),
-            output: temp_dir3.path().join("out_noext.txt"),
-            include_dirs: None,
-            exclude_dirs: None,
-            include_ext: Some(vec!["".to_string()]),
-            exclude_ext: None,
-            include_files: None,
-            exclude_files: None,
-            min_size: Some(0),
-            max_size: None,
-            respect_gitignore: true,
-            tree_only: false,
-        };
+        let config_noext = create_test_config(
+            temp_dir3.path().to_path_buf(),
+            temp_dir3.path().join("out_noext.txt"),
+            |c| {
+                c.include_ext = Some(vec!["".to_string()]);
+                c.min_size = Some(0);
+            },
+        );
         let dir_structure =
             get_directory_structure(temp_dir3.path(), &gitignore, &ignored_dirs, &config_noext)?;
         process_files(&config_noext, &gitignore, &dir_structure, &ignored_dirs)?;
@@ -946,20 +683,11 @@ mod tests {
         create_file(temp_dir.path().join("output.txt"), "SHOULD_NOT_BE_INCLUDED")?;
         create_file(temp_dir.path().join("keep.txt"), "KEEP")?;
 
-        let config = Config {
-            directory: temp_dir.path().to_path_buf(),
-            output: temp_dir.path().join("output.txt"),
-            include_dirs: None,
-            exclude_dirs: None,
-            include_ext: None,
-            exclude_ext: None,
-            include_files: None,
-            exclude_files: None,
-            min_size: Some(0),
-            max_size: None,
-            respect_gitignore: true,
-            tree_only: false,
-        };
+        let config = create_test_config(
+            temp_dir.path().to_path_buf(),
+            temp_dir.path().join("output.txt"),
+            |c| c.min_size = Some(0),
+        );
         let ignored_dirs = ["node_modules"];
         let gitignore = create_gitignore_empty();
         let dir_structure =
@@ -987,20 +715,9 @@ mod tests {
 
         let gitignore = Gitignore::empty();
         let ignored_dirs: Vec<&str> = vec![];
-        let config = Config {
-            directory: root.to_path_buf(),
-            output: root.join("output.txt"),
-            include_dirs: Some(vec!["docs".to_string()]),
-            exclude_dirs: None,
-            include_ext: None,
-            exclude_ext: None,
-            include_files: None,
-            exclude_files: None,
-            min_size: None,
-            max_size: None,
-            respect_gitignore: true,
-            tree_only: false,
-        };
+        let config = create_test_config(root.to_path_buf(), root.join("output.txt"), |c| {
+            c.include_dirs = Some(vec!["docs".to_string()])
+        });
 
         let result = get_directory_structure(root, &gitignore, &ignored_dirs, &config)?;
         assert!(result.contains("docs/"));

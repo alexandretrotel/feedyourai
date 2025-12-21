@@ -2,7 +2,7 @@ use ignore::gitignore::Gitignore;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 
 pub fn setup_temp_dir() -> TempDir {
@@ -15,6 +15,8 @@ pub fn create_file<P: AsRef<Path>>(path: P, contents: &str) -> std::io::Result<(
     Ok(())
 }
 
+/// Create a sample test directory with some files and a .gitignore, returning the TempDir
+/// and the parsed `Gitignore` instance.
 pub fn setup_test_dir() -> (TempDir, Gitignore) {
     let temp_dir = TempDir::new().unwrap();
     let root = temp_dir.path();
@@ -33,4 +35,28 @@ pub fn setup_test_dir() -> (TempDir, Gitignore) {
     let gitignore = Gitignore::new(root.join(".gitignore")).0;
 
     (temp_dir, gitignore)
+}
+
+/// Helper to create a `Config` for tests.
+pub fn create_test_config(
+    directory: PathBuf,
+    output: PathBuf,
+    overrides: impl FnOnce(&mut crate::config::Config),
+) -> crate::config::Config {
+    let mut config = crate::config::Config {
+        directory,
+        output,
+        include_dirs: None,
+        exclude_dirs: None,
+        include_ext: None,
+        exclude_ext: None,
+        include_files: None,
+        exclude_files: None,
+        min_size: None,
+        max_size: None,
+        respect_gitignore: true,
+        tree_only: false,
+    };
+    overrides(&mut config);
+    config
 }
