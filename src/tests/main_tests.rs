@@ -38,32 +38,6 @@ impl Drop for CwdGuard {
     }
 }
 
-/// Helper to restore an environment variable when dropped.
-struct EnvVarGuard {
-    key: String,
-    prev: Option<String>,
-}
-
-impl EnvVarGuard {
-    fn set(key: &str, val: &str) -> Self {
-        let prev = env::var(key).ok();
-        unsafe { std::env::set_var(key, val) };
-        Self {
-            key: key.to_string(),
-            prev,
-        }
-    }
-}
-
-impl Drop for EnvVarGuard {
-    fn drop(&mut self) {
-        match &self.prev {
-            Some(v) => unsafe { std::env::set_var(&self.key, v) },
-            None => unsafe { std::env::remove_var(&self.key) },
-        }
-    }
-}
-
 #[test]
 fn test_init_local_creates_file() {
     // Create a temporary directory and switch to it so init writes ./fyai.yaml there.
