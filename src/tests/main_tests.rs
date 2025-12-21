@@ -13,6 +13,12 @@ fn acquire_lock() -> &'static Mutex<()> {
     SERIALIZE_TESTS.get_or_init(|| Mutex::new(()))
 }
 
+fn lock_tests() -> std::sync::MutexGuard<'static, ()> {
+    acquire_lock()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
 /// Helper to restore the current working directory when dropped.
 struct CwdGuard {
     orig: PathBuf,
@@ -61,7 +67,7 @@ impl Drop for EnvVarGuard {
 #[test]
 fn test_init_local_creates_file() {
     // Create a temporary directory and switch to it so init writes ./fyai.yaml there.
-    let _serial = acquire_lock().lock().unwrap();
+    let _serial = lock_tests();
     let temp = TempDir::new().expect("create tempdir");
     let _cwd_guard = CwdGuard::new();
     env::set_current_dir(temp.path()).expect("set cwd to temp");
@@ -85,7 +91,7 @@ fn test_init_local_creates_file() {
 #[test]
 fn test_init_global_uses_home_dir() {
     // Create a temporary directory to act as HOME and set HOME env var.
-    let _serial = acquire_lock().lock().unwrap();
+    let _serial = lock_tests();
     let temp_home = TempDir::new().expect("create tempdir for HOME");
     let _env_guard = EnvVarGuard::set("HOME", temp_home.path().to_str().unwrap());
 
@@ -114,7 +120,7 @@ fn test_init_global_uses_home_dir() {
 #[test]
 fn test_init_already_exists_without_force_errors() {
     // Ensure local file exists and that calling init without --force returns AlreadyExists
-    let _serial = acquire_lock().lock().unwrap();
+    let _serial = lock_tests();
     let temp = TempDir::new().expect("create tempdir");
     let _cwd_guard = CwdGuard::new();
     env::set_current_dir(temp.path()).expect("set cwd to temp");
@@ -135,7 +141,7 @@ fn test_init_already_exists_without_force_errors() {
 #[test]
 fn test_init_force_overwrites_existing() {
     // Create an existing fyai.yaml and call init --force to overwrite it.
-    let _serial = acquire_lock().lock().unwrap();
+    let _serial = lock_tests();
     let temp = TempDir::new().expect("create tempdir");
     let _cwd_guard = CwdGuard::new();
     env::set_current_dir(temp.path()).expect("set cwd to temp");
