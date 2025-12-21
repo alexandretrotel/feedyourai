@@ -40,10 +40,7 @@ pub fn run_with_config(config: crate::config::Config) -> io::Result<()> {
     Ok(())
 }
 
-fn main() -> io::Result<()> {
-    let matches = crate::cli::create_commands().get_matches();
-
-    // Handle init subcommand
+pub fn handle_init_subcommand(matches: &clap::ArgMatches) -> io::Result<bool> {
     if let Some(sub_m) = matches.subcommand_matches("init") {
         let global = sub_m.get_flag("global");
         let force = sub_m.get_flag("force");
@@ -60,11 +57,13 @@ fn main() -> io::Result<()> {
         };
 
         if path.exists() && !force {
-            eprintln!(
-                "Config file already exists at {}. Use --force to overwrite.",
-                display_path
-            );
-            std::process::exit(1);
+            return Err(io::Error::new(
+                io::ErrorKind::AlreadyExists,
+                format!(
+                    "Config file already exists at {}. Use --force to overwrite.",
+                    display_path
+                ),
+            ));
         }
 
         let template = r#"# fyai.yaml - Configuration file for fyai
@@ -99,6 +98,16 @@ tree_only: false            # Only output directory tree, no file contents
 
         std::fs::write(&path, template)?;
         println!("Template config file written to {}", display_path);
+        return Ok(true);
+    }
+    Ok(false)
+}
+
+fn main() -> io::Result<()> {
+    let matches = crate::cli::create_commands().get_matches();
+
+    // Handle init subcommand via helper so tests can call it directly.
+    if handle_init_subcommand(&matches)? {
         return Ok(());
     }
 

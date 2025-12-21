@@ -1,10 +1,17 @@
 use std::fs;
 use std::io;
 use std::path::PathBuf;
+use std::sync::{Mutex, OnceLock};
 
 use clap::{Arg, ArgAction, Command};
 
 use crate::config::{Config, FileConfig, config_from_matches, discover_config_file, merge_config};
+
+static TEST_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+
+fn test_lock() -> std::sync::MutexGuard<'static, ()> {
+    TEST_LOCK.get_or_init(|| Mutex::new(())).lock().unwrap()
+}
 
 #[test]
 fn test_fileconfig_from_path_valid() {
@@ -55,6 +62,7 @@ fn test_fileconfig_from_path_invalid_yaml() {
 
 #[test]
 fn test_discover_config_file_local() {
+    let _lock = test_lock();
     // ensure local ./fyai.yaml presence is detected
     let path = "./fyai.yaml";
     fs::write(path, "directory: test").expect("write fyai");
@@ -70,6 +78,7 @@ fn test_discover_config_file_local() {
 
 #[test]
 fn test_discover_config_file_global() {
+    let _lock = test_lock();
     // Use the system config dir returned by `dirs::config_dir()` instead of modifying env vars.
     // If the system doesn't provide one, skip the test.
     if let Some(config_dir) = dirs::config_dir() {
