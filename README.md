@@ -7,6 +7,7 @@ A command-line tool to combine files from a directory into a single file for AI 
 ## Features
 
 - Combines multiple text files into one output file
+- Supports configuration via CLI options **and config files** (YAML)
 - Filters files by:
   - Size
   - File extensions (e.g., `.txt`, `.md`)
@@ -40,6 +41,33 @@ This installs the `fyai` binary to `~/.cargo/bin/`. Ensure this directory is in 
 
 Run `fyai` in your terminal to combine files:
 
+### Config File Support
+
+You can specify options in a config file (YAML format):
+
+- **Local config:** `./fyai.yaml` (used if present in current directory)
+- **Global config:** `~/.fyai/config.yaml` (used if no local config found)
+- **Precedence:** Local config overrides global config. CLI options override both config files.
+
+#### Example `fyai.yaml`
+
+```yaml
+directory: ./src
+output: combined.txt
+include_ext:
+  - md
+  - txt
+exclude_dirs:
+  - node_modules
+  - dist
+min_size: 10240
+max_size: 512000
+respect_gitignore: true
+tree_only: false
+```
+
+All CLI options can be set in the config file. CLI flags always take precedence.
+
 ### Basic Usage
 
 ```bash
@@ -69,6 +97,13 @@ OPTIONS:
         --tree-only                Only output the project directory tree, no file contents
     -h, --help                     Print help information
     -V, --version                  Print version information
+
+CONFIG FILE SUPPORT:
+    You can specify options in a config file (YAML format).
+    Local config: ./fyai.yaml (used if present in current directory)
+    Global config: ~/.fyai/config.yaml (used if no local config found)
+    CLI options override config file values.
+    See README for details and examples.
 ```
 
 ### Examples

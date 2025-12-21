@@ -5,7 +5,7 @@ use std::path::Path;
 /// Builds a `Gitignore` instance from the specified directory and `.gitignore` file,
 /// appending default ignored files and directories to `.gitignore` if they don't exist,
 /// and normalizes existing directory entries to `folder/**`.
-use crate::cli::Config;
+use crate::config::Config;
 
 pub fn build_gitignore(
     dir_path: &Path,

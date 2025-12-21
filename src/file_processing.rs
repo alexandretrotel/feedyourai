@@ -1,9 +1,10 @@
-use crate::cli::Config;
 use ignore::gitignore::Gitignore;
 use std::fs::{self, File};
 use std::io::{self, Read, Write};
 use std::path::Path;
 use walkdir::WalkDir;
+
+use crate::config::Config;
 
 /// Checks if a path is within an ignored directory, including user-specified excluded directories.
 pub fn is_in_ignored_dir(

@@ -1,124 +1,11 @@
 use clap::{Arg, Command};
-use std::io;
-use std::path::PathBuf;
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct Config {
-    pub directory: PathBuf,
-    pub output: PathBuf,
-    pub include_dirs: Option<Vec<String>>,
-    pub exclude_dirs: Option<Vec<String>>,
-    pub include_ext: Option<Vec<String>>,
-    pub exclude_ext: Option<Vec<String>>,
-    pub include_files: Option<Vec<String>>,
-    pub exclude_files: Option<Vec<String>>,
-    pub min_size: Option<u64>,
-    pub max_size: Option<u64>,
-    pub respect_gitignore: bool,
-    pub tree_only: bool,
-}
-
-pub fn config_from_matches(matches: clap::ArgMatches) -> io::Result<Config> {
-    let directory = matches
-        .get_one::<String>("directory")
-        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Missing directory"))?
-        .into();
-    let output = matches
-        .get_one::<String>("output")
-        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Missing output"))?
-        .into();
-
-    let include_dirs = matches.get_one::<String>("include_dirs").map(|dirs| {
-        dirs.split(',')
-            .map(|s| s.trim().to_lowercase())
-            .filter(|s| !s.is_empty())
-            .collect::<Vec<_>>()
-    });
-
-    let exclude_dirs = matches.get_one::<String>("exclude_dirs").map(|dirs| {
-        dirs.split(',')
-            .map(|s| s.trim().to_lowercase())
-            .filter(|s| !s.is_empty())
-            .collect::<Vec<_>>()
-    });
-
-    let include_ext = matches.get_one::<String>("include_ext").map(|ext| {
-        ext.split(',')
-            .map(|s| s.trim().to_lowercase())
-            .filter(|s| !s.is_empty())
-            .collect::<Vec<_>>()
-    });
-
-    let exclude_ext = matches.get_one::<String>("exclude_ext").map(|ext| {
-        ext.split(',')
-            .map(|s| s.trim().to_lowercase())
-            .filter(|s| !s.is_empty())
-            .collect::<Vec<_>>()
-    });
-
-    let include_files = matches.get_one::<String>("include_files").map(|files| {
-        files
-            .split(',')
-            .map(|s| s.trim().to_lowercase())
-            .filter(|s| !s.is_empty())
-            .collect::<Vec<_>>()
-    });
-
-    let exclude_files = matches.get_one::<String>("exclude_files").map(|files| {
-        files
-            .split(',')
-            .map(|s| s.trim().to_lowercase())
-            .filter(|s| !s.is_empty())
-            .collect::<Vec<_>>()
-    });
-
-    let min_size = matches
-        .get_one::<String>("min_size")
-        .map(|s| {
-            s.parse::<u64>()
-                .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "Invalid min-size"))
-        })
-        .transpose()?;
-    let max_size = matches
-        .get_one::<String>("max_size")
-        .map(|s| {
-            s.parse::<u64>()
-                .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "Invalid max-size"))
-        })
-        .transpose()?;
-    let respect_gitignore = matches
-        .get_one::<String>("respect_gitignore")
-        .map(|s| s == "true" || s == "1")
-        .unwrap_or(true);
-
-    let tree_only = matches.get_flag("tree_only");
-
-    Ok(Config {
-        directory,
-        output,
-        include_dirs,
-        exclude_dirs,
-        include_ext,
-        exclude_ext,
-        include_files,
-        exclude_files,
-        min_size,
-        max_size,
-        respect_gitignore,
-        tree_only,
-    })
-}
-
-/// Parses command-line arguments and returns a `Config` struct.
-pub fn parse_args() -> io::Result<Config> {
-    let matches = create_commands().get_matches();
-    config_from_matches(matches)
-}
+use crate::config::{Config, config_from_matches};
 
 pub fn create_commands() -> Command {
     Command::new("fyai")
         .version(env!("CARGO_PKG_VERSION"))
-        .about("A tool to combine text files for AI processing with flexible filtering options.")
+        .about("A tool to combine text files for AI processing with flexible filtering options.\n\nCONFIG FILE SUPPORT:\n  - You can specify options in a config file (YAML format).\n  - Local config: ./fyai.yaml (used if present in current directory)\n  - Global config: ~/.fyai/config.yaml (used if no local config found)\n  - CLI options override config file values.\n  - See README for details and examples.")
         .arg(
             Arg::new("directory")
                 .short('d')
@@ -204,4 +91,10 @@ pub fn create_commands() -> Command {
                 .action(clap::ArgAction::SetTrue)
                 .help("Run in test mode"),
         )
+}
+
+/// Parses command-line arguments and returns a `Config` struct.
+pub fn parse_args() -> std::io::Result<Config> {
+    let matches = create_commands().get_matches();
+    config_from_matches(matches)
 }
