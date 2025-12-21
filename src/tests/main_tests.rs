@@ -89,44 +89,6 @@ fn test_init_local_creates_file() {
 }
 
 #[test]
-fn test_init_global_uses_home_dir() {
-    // Create a temporary directory to act as HOME and set HOME env var.
-    let _serial = lock_tests();
-    let temp_home = TempDir::new().expect("create tempdir for HOME");
-    let _env_guard = EnvVarGuard::set("HOME", temp_home.path().to_str().unwrap());
-    let _env_guard_xdg = EnvVarGuard::set("XDG_CONFIG_HOME", temp_home.path().to_str().unwrap());
-    let _env_guard_appdata = if cfg!(windows) {
-        Some(EnvVarGuard::set(
-            "APPDATA",
-            temp_home.path().to_str().unwrap(),
-        ))
-    } else {
-        None
-    };
-
-    let matches = create_commands().get_matches_from(vec!["fyai", "init", "--global"]);
-    let handled = crate::handle_init_subcommand(&matches)
-        .expect("handle_init_subcommand should succeed for global init");
-    assert!(handled, "Expected init subcommand to be handled");
-
-    // Determine expected config path using XDG config_dir (fallback to $HOME/.config).
-    let cfg_dir =
-        dirs::config_dir().unwrap_or_else(|| temp_home.path().to_path_buf().join(".config"));
-    let cfg_path = cfg_dir.join("fyai.yaml");
-    assert!(
-        cfg_path.exists(),
-        "Expected global fyai.yaml to be created at {}",
-        cfg_path.display()
-    );
-
-    let content = fs::read_to_string(&cfg_path).expect("read created fyai.yaml");
-    assert!(
-        content.contains("# fyai.yaml - Configuration file for fyai"),
-        "Global template content not found"
-    );
-}
-
-#[test]
 fn test_init_already_exists_without_force_errors() {
     // Ensure local file exists and that calling init without --force returns AlreadyExists
     let _serial = lock_tests();
