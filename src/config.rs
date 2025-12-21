@@ -89,80 +89,117 @@ pub fn merge_config(file: FileConfig, cli: Config) -> Config {
 /// Create Config from clap ArgMatches
 pub fn config_from_matches(matches: clap::ArgMatches) -> std::io::Result<Config> {
     let directory = matches
-        .get_one::<String>("directory")
+        .try_get_one::<String>("directory")
+        .map_err(|e| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("Missing directory: {}", e),
+            )
+        })?
         .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidInput, "Missing directory"))?
         .into();
+
     let output = matches
-        .get_one::<String>("output")
+        .try_get_one::<String>("output")
+        .map_err(|e| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("Missing output: {}", e),
+            )
+        })?
         .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidInput, "Missing output"))?
         .into();
 
-    let include_dirs = matches.get_one::<String>("include_dirs").map(|dirs| {
-        dirs.split(',')
-            .map(|s| s.trim().to_lowercase())
-            .filter(|s| !s.is_empty())
-            .collect::<Vec<_>>()
-    });
+    let include_dirs = match matches.try_get_one::<String>("include_dirs") {
+        Ok(opt) => opt.map(|dirs| {
+            dirs.split(',')
+                .map(|s| s.trim().to_lowercase())
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+        }),
+        Err(_) => None,
+    };
 
-    let exclude_dirs = matches.get_one::<String>("exclude_dirs").map(|dirs| {
-        dirs.split(',')
-            .map(|s| s.trim().to_lowercase())
-            .filter(|s| !s.is_empty())
-            .collect::<Vec<_>>()
-    });
+    let exclude_dirs = match matches.try_get_one::<String>("exclude_dirs") {
+        Ok(opt) => opt.map(|dirs| {
+            dirs.split(',')
+                .map(|s| s.trim().to_lowercase())
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+        }),
+        Err(_) => None,
+    };
 
-    let include_ext = matches.get_one::<String>("include_ext").map(|ext| {
-        ext.split(',')
-            .map(|s| s.trim().to_lowercase())
-            .filter(|s| !s.is_empty())
-            .collect::<Vec<_>>()
-    });
+    let include_ext = match matches.try_get_one::<String>("include_ext") {
+        Ok(opt) => opt.map(|ext| {
+            ext.split(',')
+                .map(|s| s.trim().to_lowercase())
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+        }),
+        Err(_) => None,
+    };
 
-    let exclude_ext = matches.get_one::<String>("exclude_ext").map(|ext| {
-        ext.split(',')
-            .map(|s| s.trim().to_lowercase())
-            .filter(|s| !s.is_empty())
-            .collect::<Vec<_>>()
-    });
+    let exclude_ext = match matches.try_get_one::<String>("exclude_ext") {
+        Ok(opt) => opt.map(|ext| {
+            ext.split(',')
+                .map(|s| s.trim().to_lowercase())
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+        }),
+        Err(_) => None,
+    };
 
-    let include_files = matches.get_one::<String>("include_files").map(|files| {
-        files
-            .split(',')
-            .map(|s| s.trim().to_lowercase())
-            .filter(|s| !s.is_empty())
-            .collect::<Vec<_>>()
-    });
+    let include_files = match matches.try_get_one::<String>("include_files") {
+        Ok(opt) => opt.map(|files| {
+            files
+                .split(',')
+                .map(|s| s.trim().to_lowercase())
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+        }),
+        Err(_) => None,
+    };
 
-    let exclude_files = matches.get_one::<String>("exclude_files").map(|files| {
-        files
-            .split(',')
-            .map(|s| s.trim().to_lowercase())
-            .filter(|s| !s.is_empty())
-            .collect::<Vec<_>>()
-    });
+    let exclude_files = match matches.try_get_one::<String>("exclude_files") {
+        Ok(opt) => opt.map(|files| {
+            files
+                .split(',')
+                .map(|s| s.trim().to_lowercase())
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+        }),
+        Err(_) => None,
+    };
 
-    let min_size = matches
-        .get_one::<String>("min_size")
-        .map(|s| {
-            s.parse::<u64>().map_err(|_| {
-                std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid min-size")
-            })
-        })
-        .transpose()?;
-    let max_size = matches
-        .get_one::<String>("max_size")
-        .map(|s| {
-            s.parse::<u64>().map_err(|_| {
-                std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid max-size")
-            })
-        })
-        .transpose()?;
-    let respect_gitignore = matches
-        .get_one::<String>("respect_gitignore")
-        .map(|s| s == "true" || s == "1")
-        .unwrap_or(true);
+    let min_size = match matches.try_get_one::<String>("min_size") {
+        Ok(Some(s)) => Some(s.parse::<u64>().map_err(|_| {
+            std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid min-size")
+        })?),
+        Ok(None) => None,
+        Err(_) => None,
+    };
 
-    let tree_only = matches.get_flag("tree_only");
+    let max_size = match matches.try_get_one::<String>("max_size") {
+        Ok(Some(s)) => Some(s.parse::<u64>().map_err(|_| {
+            std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid max-size")
+        })?),
+        Ok(None) => None,
+        Err(_) => None,
+    };
+
+    let respect_gitignore = match matches.try_get_one::<String>("respect_gitignore") {
+        Ok(Some(s)) => s == "true" || s == "1",
+        Ok(None) => true,
+        Err(_) => true,
+    };
+
+    // For flags, keep using contains_id + get_flag which is safe when checked first
+    let tree_only = if matches.contains_id("tree_only") {
+        matches.get_flag("tree_only")
+    } else {
+        false
+    };
 
     Ok(Config {
         directory,
