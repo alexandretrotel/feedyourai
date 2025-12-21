@@ -169,8 +169,8 @@ pub fn process_files(
         let file_name = path
             .file_name()
             .and_then(|f| f.to_str())
-            .unwrap_or_default()
-            .to_lowercase();
+            .unwrap_or_default();
+        let file_name_lower = file_name.to_lowercase();
 
         // Extension filtering
         if !is_ext_included_excluded(ext, &config.include_ext, &config.exclude_ext) {
@@ -178,7 +178,11 @@ pub fn process_files(
         }
 
         // File name filtering
-        if !is_file_included_excluded(&file_name, &config.include_files, &config.exclude_files) {
+        if !is_file_included_excluded(
+            &file_name_lower,
+            &config.include_files,
+            &config.exclude_files,
+        ) {
             continue;
         }
 
