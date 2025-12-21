@@ -46,11 +46,13 @@ pub fn handle_init_subcommand(matches: &clap::ArgMatches) -> io::Result<bool> {
         let force = sub_m.get_flag("force");
 
         let (path, display_path) = if global {
-            let mut home = dirs::home_dir().expect("Could not determine home directory");
-            home.push(".fyai");
-            std::fs::create_dir_all(&home)?;
-            home.push("config.yaml");
-            (home.clone(), home.display().to_string())
+            let cfg_dir = dirs::config_dir()
+                .or_else(|| dirs::home_dir().map(|h| h.join(".config")))
+                .expect("Could not determine config directory");
+            std::fs::create_dir_all(&cfg_dir)?;
+            let mut cfg_path = cfg_dir.clone();
+            cfg_path.push("fyai.yaml");
+            (cfg_path.clone(), cfg_path.display().to_string())
         } else {
             let local = std::path::PathBuf::from("./fyai.yaml");
             (local.clone(), local.display().to_string())

@@ -94,13 +94,17 @@ fn test_init_global_uses_home_dir() {
         .expect("handle_init_subcommand should succeed for global init");
     assert!(handled, "Expected init subcommand to be handled");
 
-    let cfg_path = temp_home.path().join(".fyai").join("config.yaml");
+    // Determine expected config path using XDG config_dir (fallback to $HOME/.config).
+    let cfg_dir =
+        dirs::config_dir().unwrap_or_else(|| temp_home.path().to_path_buf().join(".config"));
+    let cfg_path = cfg_dir.join("fyai.yaml");
     assert!(
         cfg_path.exists(),
-        "Expected global config.yaml to be created"
+        "Expected global fyai.yaml to be created at {}",
+        cfg_path.display()
     );
 
-    let content = fs::read_to_string(&cfg_path).expect("read created config.yaml");
+    let content = fs::read_to_string(&cfg_path).expect("read created fyai.yaml");
     assert!(
         content.contains("# fyai.yaml - Configuration file for fyai"),
         "Global template content not found"
