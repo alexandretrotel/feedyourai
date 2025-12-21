@@ -68,11 +68,51 @@ pub fn discover_config_file() -> Option<PathBuf> {
 }
 
 /// Merge FileConfig with CLI Config.
-/// CLI config takes precedence over file config.
-pub fn merge_config(file: FileConfig, cli: Config) -> Config {
+///
+/// The merge accepts an `ExplicitFlags` argument which indicates which CLI
+/// values were explicitly set by the user.
+#[derive(Debug, Clone, Copy)]
+pub struct ExplicitFlags {
+    pub directory: bool,
+    pub output: bool,
+    pub respect_gitignore: bool,
+    pub tree_only: bool,
+}
+
+pub fn merge_config_with_explicit(
+    file: FileConfig,
+    cli: Config,
+    explicit: ExplicitFlags,
+) -> Config {
+    // For directory and output, prefer file value when the CLI did not explicitly set them.
+    let directory = if explicit.directory {
+        cli.directory
+    } else {
+        file.directory.map(PathBuf::from).unwrap_or(cli.directory)
+    };
+
+    let output = if explicit.output {
+        cli.output
+    } else {
+        file.output.map(PathBuf::from).unwrap_or(cli.output)
+    };
+
+    // For booleans, use file value when CLI did not explicitly set the flag.
+    let respect_gitignore = if explicit.respect_gitignore {
+        cli.respect_gitignore
+    } else {
+        file.respect_gitignore.unwrap_or(cli.respect_gitignore)
+    };
+
+    let tree_only = if explicit.tree_only {
+        cli.tree_only
+    } else {
+        file.tree_only.unwrap_or(cli.tree_only)
+    };
+
     Config {
-        directory: cli.directory,
-        output: cli.output,
+        directory,
+        output,
         include_dirs: cli.include_dirs.or(file.include_dirs),
         exclude_dirs: cli.exclude_dirs.or(file.exclude_dirs),
         include_ext: cli.include_ext.or(file.include_ext),
@@ -81,13 +121,40 @@ pub fn merge_config(file: FileConfig, cli: Config) -> Config {
         exclude_files: cli.exclude_files.or(file.exclude_files),
         min_size: cli.min_size.or(file.min_size),
         max_size: cli.max_size.or(file.max_size),
-        respect_gitignore: cli.respect_gitignore,
-        tree_only: cli.tree_only,
+        respect_gitignore,
+        tree_only,
     }
 }
 
 /// Create Config from clap ArgMatches
-pub fn config_from_matches(matches: clap::ArgMatches) -> std::io::Result<Config> {
+///
+/// Returns both the built `Config` and an `ExplicitFlags` struct that indicates
+/// which CLI values were actually provided on the command line (as opposed to
+/// being left as clap defaults).
+pub fn config_from_matches_with_explicit(
+    matches: clap::ArgMatches,
+) -> std::io::Result<(Config, ExplicitFlags)> {
+    let directory_set = match matches.try_get_one::<String>("directory") {
+        Ok(Some(_)) => true,
+        Ok(None) => false,
+        Err(_) => false,
+    };
+    let output_set = match matches.try_get_one::<String>("output") {
+        Ok(Some(_)) => true,
+        Ok(None) => false,
+        Err(_) => false,
+    };
+    let respect_gitignore_set = match matches.try_get_one::<String>("respect_gitignore") {
+        Ok(Some(_)) => true,
+        Ok(None) => false,
+        Err(_) => false,
+    };
+    let tree_only_set = match matches.try_get_one::<bool>("tree_only") {
+        Ok(Some(_)) => true,
+        Ok(None) => false,
+        Err(_) => false,
+    };
+
     let directory = matches
         .try_get_one::<String>("directory")
         .map_err(|e| {
@@ -103,7 +170,7 @@ pub fn config_from_matches(matches: clap::ArgMatches) -> std::io::Result<Config>
         .try_get_one::<String>("output")
         .map_err(|e| {
             std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
+                io::ErrorKind::InvalidInput,
                 format!("Missing output: {}", e),
             )
         })?
@@ -201,18 +268,26 @@ pub fn config_from_matches(matches: clap::ArgMatches) -> std::io::Result<Config>
         Err(_) => false,
     };
 
-    Ok(Config {
-        directory,
-        output,
-        include_dirs,
-        exclude_dirs,
-        include_ext,
-        exclude_ext,
-        include_files,
-        exclude_files,
-        min_size,
-        max_size,
-        respect_gitignore,
-        tree_only,
-    })
+    Ok((
+        Config {
+            directory,
+            output,
+            include_dirs,
+            exclude_dirs,
+            include_ext,
+            exclude_ext,
+            include_files,
+            exclude_files,
+            min_size,
+            max_size,
+            respect_gitignore,
+            tree_only,
+        },
+        ExplicitFlags {
+            directory: directory_set,
+            output: output_set,
+            respect_gitignore: respect_gitignore_set,
+            tree_only: tree_only_set,
+        },
+    ))
 }

@@ -114,7 +114,9 @@ fn main() -> io::Result<()> {
     }
 
     // Normal flow: parse CLI args and config file
-    let cli_config = crate::config::config_from_matches(matches)?;
+    // `config_from_matches_with_explicit` returns both the parsed CLI `Config` and an
+    // `ExplicitFlags` struct indicating which CLI options were explicitly set.
+    let (cli_config, explicit) = crate::config::config_from_matches_with_explicit(matches)?;
 
     // Discover and load config file if present
     let file_config = match crate::config::discover_config_file() {
@@ -135,8 +137,8 @@ fn main() -> io::Result<()> {
         None => crate::config::FileConfig::default(),
     };
 
-    // Merge configs (CLI takes precedence)
-    let config = crate::config::merge_config(file_config, cli_config);
+    // Merge configs (CLI takes precedence, but allow file to provide values when CLI didn't explicitly set them)
+    let config = crate::config::merge_config_with_explicit(file_config, cli_config, explicit);
 
     // Delegate to the extracted function so it can be tested in isolation.
     run_with_config(config)
