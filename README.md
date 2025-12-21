@@ -52,23 +52,45 @@ USAGE:
     fyai [OPTIONS]
 
 OPTIONS:
-    -d, --dir <DIR>          Sets the input directory [default: .]
-    -o, --output <FILE>      Sets the output file [default: fyai.txt]
-    -e, --ext <EXT>          Comma-separated list of file extensions to exclude (e.g., txt,md)
-    -x, --exclude-dirs <DIRS> Comma-separated list of directories to exclude (e.g., src,tests)
-    -n, --min-size <BYTES>   Exclude files smaller than this size in bytes (default: 51200)
-    -m, --max-size <BYTES>   Exclude files larger than this size in bytes
-    --tree-only              Only output the project directory tree, no file contents
-    -h, --help               Print help information
-    -V, --version            Print version information
+    -d, --dir <DIR>                Sets the input directory [default: .]
+    -o, --output <FILE>            Sets the output file [default: fyai.txt]
+        --include-dirs <DIRS>      Comma-separated list of directories to include (e.g., src,docs)
+    -x, --exclude-dirs <DIRS>      Comma-separated list of directories to exclude (e.g., node_modules,dist)
+        --include-files <FILES>    Comma-separated list of files to include (e.g., README.md,main.rs)
+        --exclude-files <FILES>    Comma-separated list of files to exclude (e.g., LICENSE,config.json)
+        --include-ext <EXT>        Comma-separated list of file extensions to include (e.g., txt,md)
+    -e, --exclude-ext <EXT>        Comma-separated list of file extensions to exclude (e.g., log,tmp)
+    -n, --min-size <BYTES>         Exclude files smaller than this size in bytes (default: 51200)
+    -m, --max-size <BYTES>         Exclude files larger than this size in bytes
+        --tree-only                Only output the project directory tree, no file contents
+    -h, --help                     Print help information
+    -V, --version                  Print version information
 ```
 
 ### Examples
 
-- Combine `.txt` and `.md` files from a specific directory:
+- Combine only `.txt` and `.md` files from a specific directory:
 
   ```bash
-  fyai -d ./docs -e txt,md
+  fyai -d ./docs --include-ext txt,md
+  ```
+
+- Exclude all `.log` and `.tmp` files from the output:
+
+  ```bash
+  fyai --exclude-ext log,tmp
+  ```
+
+- Include only files named `README.md` and `main.rs` from the `src` and `docs` directories:
+
+  ```bash
+  fyai --include-dirs src,docs --include-files README.md,main.rs
+  ```
+
+- Exclude all files named `LICENSE` and `config.json` from any directory:
+
+  ```bash
+  fyai --exclude-files LICENSE,config.json
   ```
 
 - Include all files (no size minimum) up to 1MB:
@@ -77,9 +99,10 @@ OPTIONS:
   fyai -n 0 -m 1048576
   ```
 
-- Custom output file with files between 10KB and 500KB, excluding `list` and `node_modules`:
+- Custom output file with files between 10KB and 500KB, excluding `dist` and `node_modules` directories:
+
   ```bash
-  fyai -n 10240 -m 512000 -o ai_input.txt -x dist, node_modules
+  fyai -n 10240 -m 512000 -o ai_input.txt -x dist,node_modules
   ```
 
 - Output only the project directory structure (no file contents):
