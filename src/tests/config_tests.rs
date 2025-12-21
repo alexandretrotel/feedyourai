@@ -41,7 +41,7 @@ respect_gitignore: false
         vec!["a".to_string(), "b".to_string()]
     );
     assert_eq!(cfg.min_size.unwrap(), 10);
-    assert_eq!(cfg.respect_gitignore.unwrap(), false);
+    assert!(!cfg.respect_gitignore.unwrap());
 }
 
 #[test]
@@ -206,7 +206,7 @@ fn test_config_from_matches_parsing() {
         vec!["a".to_string(), "b".to_string()]
     );
     assert_eq!(cfg.min_size.unwrap(), 42);
-    assert_eq!(cfg.respect_gitignore, false);
+    assert!(!cfg.respect_gitignore);
     assert!(cfg.tree_only);
 }
 

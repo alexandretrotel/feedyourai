@@ -11,12 +11,12 @@ mod tests {
 
         assert_eq!(config.directory, PathBuf::from("."));
         assert_eq!(config.output, PathBuf::from("fyai.txt"));
-        assert_eq!(config.include_ext, None);
-        assert_eq!(config.exclude_ext, None);
-        assert_eq!(config.min_size, None);
-        assert_eq!(config.max_size, None);
-        assert_eq!(config.exclude_dirs, None); // Check default
-        assert_eq!(config.tree_only, false);
+        assert!(config.include_ext.is_none());
+        assert!(config.exclude_ext.is_none());
+        assert!(config.min_size.is_none());
+        assert!(config.max_size.is_none());
+        assert!(config.exclude_dirs.is_none()); // Check default
+        assert!(!config.tree_only);
     }
 
     #[test]
@@ -32,12 +32,12 @@ mod tests {
 
         assert_eq!(config.directory, PathBuf::from("/path/to/dir"));
         assert_eq!(config.output, PathBuf::from("custom.txt"));
-        assert_eq!(config.include_ext, None);
-        assert_eq!(config.exclude_ext, None);
-        assert_eq!(config.min_size, None);
-        assert_eq!(config.max_size, None);
-        assert_eq!(config.exclude_dirs, None);
-        assert_eq!(config.tree_only, false);
+        assert!(config.include_ext.is_none());
+        assert!(config.exclude_ext.is_none());
+        assert!(config.min_size.is_none());
+        assert!(config.max_size.is_none());
+        assert!(config.exclude_dirs.is_none());
+        assert!(!config.tree_only);
     }
 
     #[test]
@@ -129,6 +129,6 @@ mod tests {
         let args = create_commands().get_matches_from(vec!["fyai", "--tree-only"]);
         let config = config_from_matches(args).unwrap();
 
-        assert_eq!(config.tree_only, true);
+        assert!(config.tree_only);
     }
 }
