@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use crate::cli::Config;
 
 /// Struct for deserializing YAML config file.
-#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct FileConfig {
     pub directory: Option<String>,
     pub output: Option<String>,
