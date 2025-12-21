@@ -46,7 +46,12 @@ pub fn handle_init_subcommand(matches: &clap::ArgMatches) -> io::Result<bool> {
         let force = sub_m.get_flag("force");
 
         let (path, display_path) = if global {
-            let cfg_dir = dirs::config_dir()
+            // Prefer XDG_CONFIG_HOME, then APPDATA (Windows), then platform default (dirs::config_dir),
+            // then fallback to $HOME/.config. This ensures CI on Windows honors our temp directory.
+            let cfg_dir = std::env::var_os("XDG_CONFIG_HOME")
+                .map(std::path::PathBuf::from)
+                .or_else(|| std::env::var_os("APPDATA").map(std::path::PathBuf::from))
+                .or_else(|| dirs::config_dir())
                 .or_else(|| dirs::home_dir().map(|h| h.join(".config")))
                 .expect("Could not determine config directory");
             std::fs::create_dir_all(&cfg_dir)?;
