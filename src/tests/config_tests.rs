@@ -1,4 +1,5 @@
 use std::fs;
+use std::io;
 use std::path::PathBuf;
 
 use clap::{Arg, ArgAction, Command};
@@ -37,6 +38,22 @@ respect_gitignore: false
 }
 
 #[test]
+fn test_fileconfig_from_path_invalid_yaml() {
+    // invalid YAML should produce an io::Error with InvalidData
+    let path = "./bad_fyai_config.yaml";
+    fs::write(path, "not: [valid").expect("write bad yaml");
+
+    let res = FileConfig::from_path(path);
+
+    // cleanup
+    let _ = fs::remove_file(path);
+
+    assert!(res.is_err());
+    let err = res.err().unwrap();
+    assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+}
+
+#[test]
 fn test_discover_config_file_local() {
     // ensure local ./fyai.yaml presence is detected
     let path = "./fyai.yaml";
@@ -49,6 +66,51 @@ fn test_discover_config_file_local() {
 
     assert!(found.is_some());
     assert_eq!(found.unwrap(), PathBuf::from("./fyai.yaml"));
+}
+
+#[test]
+fn test_discover_config_file_global() {
+    // Use the system config dir returned by `dirs::config_dir()` instead of modifying env vars.
+    // If the system doesn't provide one, skip the test.
+    if let Some(config_dir) = dirs::config_dir() {
+        let cfg_path = config_dir.join("fyai.yaml");
+
+        // Ensure parent exists
+        if let Some(parent) = cfg_path.parent() {
+            fs::create_dir_all(parent).expect("create config dir");
+        }
+
+        // If a file already exists at that location, back it up so we can restore it.
+        let backup = if cfg_path.exists() {
+            let bak = cfg_path.with_extension("fyai.bak");
+            fs::rename(&cfg_path, &bak).expect("backup existing global config");
+            Some(bak)
+        } else {
+            None
+        };
+
+        // Write our test config
+        fs::write(&cfg_path, "directory: global").expect("write global fyai");
+
+        // Ensure local file does not exist so discover_config_file prefers the global location
+        let _ = fs::remove_file("./fyai.yaml");
+
+        let found = discover_config_file();
+
+        // cleanup: remove our test file
+        let _ = fs::remove_file(&cfg_path);
+
+        // restore backup if present
+        if let Some(bak) = backup {
+            let _ = fs::rename(&bak, &cfg_path);
+        }
+
+        assert!(found.is_some());
+        assert_eq!(found.unwrap(), cfg_path);
+    } else {
+        // Cannot run this test on platforms without a config dir; skip gracefully.
+        eprintln!("dirs::config_dir() returned None; skipping global discover test");
+    }
 }
 
 #[test]
@@ -158,4 +220,141 @@ fn test_config_from_matches_invalid_min_size() {
 
     let res = config_from_matches(matches);
     assert!(res.is_err());
+}
+
+// ---- New tests covering additional branches and error cases ----
+
+#[test]
+fn test_respect_gitignore_true_values() {
+    let app = Command::new("test")
+        .arg(Arg::new("directory").long("directory").num_args(1))
+        .arg(Arg::new("output").long("output").num_args(1))
+        .arg(
+            Arg::new("respect_gitignore")
+                .long("respect_gitignore")
+                .num_args(1),
+        );
+
+    // clone the Command before using it multiple times so we don't move the original
+    let matches = app.clone().get_matches_from(vec![
+        "prog",
+        "--directory",
+        "d",
+        "--output",
+        "o",
+        "--respect_gitignore",
+        "1",
+    ]);
+
+    let cfg = config_from_matches(matches).expect("create config");
+    assert!(cfg.respect_gitignore);
+
+    // also accept "true" - use the cloned original again
+    let matches2 = app.get_matches_from(vec![
+        "prog",
+        "--directory",
+        "d",
+        "--output",
+        "o",
+        "--respect_gitignore",
+        "true",
+    ]);
+    let cfg2 = config_from_matches(matches2).expect("create config");
+    assert!(cfg2.respect_gitignore);
+}
+
+#[test]
+fn test_respect_gitignore_default_when_arg_absent() {
+    // If the arg is not registered at all, config_from_matches should treat it as Err(_) => true
+    let app = Command::new("test")
+        .arg(Arg::new("directory").long("directory").num_args(1))
+        .arg(Arg::new("output").long("output").num_args(1));
+    let matches = app.get_matches_from(vec!["prog", "--directory", "d", "--output", "o"]);
+    let cfg = config_from_matches(matches).expect("create config");
+    assert!(cfg.respect_gitignore);
+}
+
+#[test]
+fn test_tree_only_absent_arg_definition() {
+    // If the tree_only arg is not registered, the code should take the else branch and set false
+    let app = Command::new("test")
+        .arg(Arg::new("directory").long("directory").num_args(1))
+        .arg(Arg::new("output").long("output").num_args(1));
+    let matches = app.get_matches_from(vec!["prog", "--directory", "d", "--output", "o"]);
+    let cfg = config_from_matches(matches).expect("create config");
+    assert!(!cfg.tree_only);
+}
+
+#[test]
+fn test_include_ext_parsing_trims_and_lowercases_and_filters_empty() {
+    let app = Command::new("test")
+        .arg(Arg::new("directory").long("directory").num_args(1))
+        .arg(Arg::new("output").long("output").num_args(1))
+        .arg(Arg::new("include_ext").long("include_ext").num_args(1));
+
+    let matches = app.get_matches_from(vec![
+        "prog",
+        "--directory",
+        "d",
+        "--output",
+        "o",
+        "--include_ext",
+        ".RS, .Md, , ",
+    ]);
+
+    let cfg = config_from_matches(matches).expect("create config");
+    let exts = cfg.include_ext.unwrap();
+    assert_eq!(exts, vec![".rs".to_string(), ".md".to_string()]);
+}
+
+#[test]
+fn test_exclude_files_parsing_trims_and_lowercases_and_filters_empty() {
+    let app = Command::new("test")
+        .arg(Arg::new("directory").long("directory").num_args(1))
+        .arg(Arg::new("output").long("output").num_args(1))
+        .arg(Arg::new("exclude_files").long("exclude_files").num_args(1));
+
+    let matches = app.get_matches_from(vec![
+        "prog",
+        "--directory",
+        "d",
+        "--output",
+        "o",
+        "--exclude_files",
+        " README.md , Cargo.TOML, , ",
+    ]);
+
+    let cfg = config_from_matches(matches).expect("create config");
+    let files = cfg.exclude_files.unwrap();
+    assert_eq!(
+        files,
+        vec!["readme.md".to_string(), "cargo.toml".to_string()]
+    );
+}
+
+#[test]
+fn test_missing_directory_error_message() {
+    // directory arg is registered but not provided => Ok(None) path -> should cause the ok_or_else message
+    let app = Command::new("test")
+        .arg(Arg::new("directory").long("directory").num_args(1))
+        .arg(Arg::new("output").long("output").num_args(1));
+    let matches = app.get_matches_from(vec!["prog", "--output", "o"]);
+    let res = config_from_matches(matches);
+    assert!(res.is_err());
+    let err = res.unwrap_err();
+    // The error message was constructed with "Missing directory"
+    assert!(err.to_string().to_lowercase().contains("missing directory"));
+}
+
+#[test]
+fn test_missing_output_error_message() {
+    // output arg is registered but not provided => Ok(None) path -> should cause the ok_or_else message
+    let app = Command::new("test")
+        .arg(Arg::new("directory").long("directory").num_args(1))
+        .arg(Arg::new("output").long("output").num_args(1));
+    let matches = app.get_matches_from(vec!["prog", "--directory", "d"]);
+    let res = config_from_matches(matches);
+    assert!(res.is_err());
+    let err = res.unwrap_err();
+    assert!(err.to_string().to_lowercase().contains("missing output"));
 }
