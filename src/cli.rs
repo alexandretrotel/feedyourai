@@ -14,6 +14,7 @@ pub struct Config {
     pub exclude_files: Option<Vec<String>>,
     pub min_size: Option<u64>,
     pub max_size: Option<u64>,
+    pub respect_gitignore: bool,
     pub tree_only: bool,
 }
 
@@ -85,6 +86,11 @@ pub fn config_from_matches(matches: clap::ArgMatches) -> io::Result<Config> {
                 .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "Invalid max-size"))
         })
         .transpose()?;
+    let respect_gitignore = matches
+        .get_one::<String>("respect_gitignore")
+        .map(|s| s == "true" || s == "1")
+        .unwrap_or(true);
+
     let tree_only = matches.get_flag("tree_only");
 
     Ok(Config {
@@ -98,6 +104,7 @@ pub fn config_from_matches(matches: clap::ArgMatches) -> io::Result<Config> {
         exclude_files,
         min_size,
         max_size,
+        respect_gitignore,
         tree_only,
     })
 }
@@ -163,6 +170,12 @@ pub fn create_commands() -> Command {
                 .long("exclude-files")
                 .value_name("FILES")
                 .help("Comma-separated list of file names to exclude (e.g., LICENSE,config.json)"),
+        )
+        .arg(
+            Arg::new("respect_gitignore")
+                .long("respect-gitignore")
+                .value_name("BOOL")
+                .help("Whether to respect .gitignore rules (true/false) [default: true]"),
         )
         .arg(
             Arg::new("min_size")

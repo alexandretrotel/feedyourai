@@ -221,8 +221,8 @@ pub fn should_skip_path_advanced(
     if is_in_ignored_dir(path, ignored_dirs, &config.exclude_dirs) {
         return true;
     }
-    // .gitignore
-    if gitignore.matched(path, is_dir).is_ignore() {
+    // .gitignore (only if respect_gitignore is true)
+    if config.respect_gitignore && gitignore.matched(path, is_dir).is_ignore() {
         return true;
     }
     // File filtering (only for files)

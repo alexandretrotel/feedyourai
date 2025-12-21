@@ -10,6 +10,9 @@ A command-line tool to combine files from a directory into a single file for AI 
 - Filters files by:
   - Size
   - File extensions (e.g., `.txt`, `.md`)
+  - Directory inclusion/exclusion
+  - File inclusion/exclusion
+  - Optionally respects `.gitignore` rules (can be disabled)
 - Preserves file boundaries with headers showing filename and size
 - Customizable input directory and output file
 
@@ -62,6 +65,7 @@ OPTIONS:
     -e, --exclude-ext <EXT>        Comma-separated list of file extensions to exclude (e.g., log,tmp)
     -n, --min-size <BYTES>         Exclude files smaller than this size in bytes (default: 51200)
     -m, --max-size <BYTES>         Exclude files larger than this size in bytes
+        --respect-gitignore <BOOL> Whether to respect .gitignore rules (true/false) [default: true]
         --tree-only                Only output the project directory tree, no file contents
     -h, --help                     Print help information
     -V, --version                  Print version information
@@ -106,8 +110,14 @@ OPTIONS:
   ```
 
 - Output only the project directory structure (no file contents):
+
   ```bash
   fyai --tree-only -o tree.txt
+  ```
+
+- Ignore .gitignore rules and include all files (even those normally excluded):
+  ```bash
+  fyai --respect-gitignore false
   ```
 
 ## Output Format
