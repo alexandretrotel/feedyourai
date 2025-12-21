@@ -15,6 +15,31 @@ mod data;
 mod file_processing;
 mod gitignore;
 
+/// Run the core application logic using a fully-resolved `Config`.
+///
+/// This function is extracted from `main` and made public so tests can call it
+/// directly with a controlled `Config`.
+pub fn run_with_config(config: crate::config::Config) -> io::Result<()> {
+    let gitignore = build_gitignore(&config.directory, IGNORED_FILES, IGNORED_DIRS, &config)?;
+
+    let dir_structure =
+        get_directory_structure(&config.directory, &gitignore, IGNORED_DIRS, &config)?;
+
+    if config.tree_only {
+        std::fs::write(&config.output, &dir_structure)?;
+        println!("Project tree written to {}", config.output.display());
+    } else {
+        process_files(&config, &gitignore, &dir_structure, IGNORED_DIRS)?;
+        copy_to_clipboard(&config.output)?;
+        println!(
+            "Files combined successfully into {}",
+            config.output.display()
+        );
+        println!("Output copied to clipboard successfully!");
+    }
+    Ok(())
+}
+
 fn main() -> io::Result<()> {
     let matches = crate::cli::create_commands().get_matches();
 
@@ -102,22 +127,6 @@ tree_only: false            # Only output directory tree, no file contents
     // Merge configs (CLI takes precedence)
     let config = crate::config::merge_config(file_config, cli_config);
 
-    let gitignore = build_gitignore(&config.directory, IGNORED_FILES, IGNORED_DIRS, &config)?;
-
-    let dir_structure =
-        get_directory_structure(&config.directory, &gitignore, IGNORED_DIRS, &config)?;
-
-    if config.tree_only {
-        std::fs::write(&config.output, &dir_structure)?;
-        println!("Project tree written to {}", config.output.display());
-    } else {
-        process_files(&config, &gitignore, &dir_structure, IGNORED_DIRS)?;
-        copy_to_clipboard(&config.output)?;
-        println!(
-            "Files combined successfully into {}",
-            config.output.display()
-        );
-        println!("Output copied to clipboard successfully!");
-    }
-    Ok(())
+    // Delegate to the extracted function so it can be tested in isolation.
+    run_with_config(config)
 }
