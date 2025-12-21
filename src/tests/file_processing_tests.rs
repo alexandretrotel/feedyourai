@@ -683,7 +683,7 @@ mod tests {
             directory: PathBuf::from("."),
             output: PathBuf::from("out.txt"),
             include_dirs: None,
-            exclude_dirs: Some(vec!["target".to_string()]),
+            exclude_dirs: Some(vec!["target".to_string(), "tests".to_string()]),
             include_ext: None,
             exclude_ext: None,
             include_files: None,
