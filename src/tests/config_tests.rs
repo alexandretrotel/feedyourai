@@ -146,7 +146,13 @@ fn test_merge_config_precedence() {
         tree_only: false,
     };
 
-    let merged = merge_config(file.clone(), cli.clone());
+    let explicit = crate::config::ExplicitFlags {
+        directory: false,
+        output: false,
+        respect_gitignore: true,
+        tree_only: false,
+    };
+    let merged = merge_config(file.clone(), cli.clone(), explicit);
 
     // cli.include_dirs should take precedence
     assert_eq!(merged.include_dirs.unwrap(), vec!["from_cli".to_string()]);
@@ -160,7 +166,7 @@ fn test_merge_config_precedence() {
         include_dirs: None,
         ..cli
     };
-    let merged2 = merge_config(file, cli2);
+    let merged2 = merge_config(file, cli2, explicit);
     assert_eq!(merged2.include_dirs.unwrap(), vec!["from_file".to_string()]);
 }
 
@@ -197,7 +203,7 @@ fn test_config_from_matches_parsing() {
         "--tree_only",
     ]);
 
-    let cfg = config_from_matches(matches).expect("create config");
+    let (cfg, _explicit) = config_from_matches(matches).expect("create config");
 
     assert_eq!(cfg.directory, PathBuf::from("dir"));
     assert_eq!(cfg.output, PathBuf::from("out"));
@@ -255,7 +261,7 @@ fn test_respect_gitignore_true_values() {
         "1",
     ]);
 
-    let cfg = config_from_matches(matches).expect("create config");
+    let (cfg, _explicit) = config_from_matches(matches).expect("create config");
     assert!(cfg.respect_gitignore);
 
     // also accept "true" - use the cloned original again
@@ -268,7 +274,7 @@ fn test_respect_gitignore_true_values() {
         "--respect_gitignore",
         "true",
     ]);
-    let cfg2 = config_from_matches(matches2).expect("create config");
+    let (cfg2, _explicit) = config_from_matches(matches2).expect("create config");
     assert!(cfg2.respect_gitignore);
 }
 
@@ -279,7 +285,7 @@ fn test_respect_gitignore_default_when_arg_absent() {
         .arg(Arg::new("directory").long("directory").num_args(1))
         .arg(Arg::new("output").long("output").num_args(1));
     let matches = app.get_matches_from(vec!["prog", "--directory", "d", "--output", "o"]);
-    let cfg = config_from_matches(matches).expect("create config");
+    let (cfg, _explicit) = config_from_matches(matches).expect("create config");
     assert!(cfg.respect_gitignore);
 }
 
@@ -290,7 +296,7 @@ fn test_tree_only_absent_arg_definition() {
         .arg(Arg::new("directory").long("directory").num_args(1))
         .arg(Arg::new("output").long("output").num_args(1));
     let matches = app.get_matches_from(vec!["prog", "--directory", "d", "--output", "o"]);
-    let cfg = config_from_matches(matches).expect("create config");
+    let (cfg, _explicit) = config_from_matches(matches).expect("create config");
     assert!(!cfg.tree_only);
 }
 
@@ -311,7 +317,7 @@ fn test_include_ext_parsing_trims_and_lowercases_and_filters_empty() {
         ".RS, .Md, , ",
     ]);
 
-    let cfg = config_from_matches(matches).expect("create config");
+    let (cfg, _explicit) = config_from_matches(matches).expect("create config");
     let exts = cfg.include_ext.unwrap();
     assert_eq!(exts, vec![".rs".to_string(), ".md".to_string()]);
 }
@@ -333,7 +339,7 @@ fn test_exclude_files_parsing_trims_and_lowercases_and_filters_empty() {
         " README.md , Cargo.TOML, , ",
     ]);
 
-    let cfg = config_from_matches(matches).expect("create config");
+    let (cfg, _explicit) = config_from_matches(matches).expect("create config");
     let files = cfg.exclude_files.unwrap();
     assert_eq!(
         files,
@@ -384,7 +390,7 @@ fn test_respect_gitignore_registered_but_not_provided() {
         );
 
     let matches = app.get_matches_from(vec!["prog", "--directory", "d", "--output", "o"]);
-    let cfg = config_from_matches(matches).expect("create config");
+    let (cfg, _explicit) = config_from_matches(matches).expect("create config");
     assert!(cfg.respect_gitignore);
 }
 
@@ -401,7 +407,7 @@ fn test_tree_only_registered_but_not_provided() {
         );
 
     let matches = app.get_matches_from(vec!["prog", "--directory", "d", "--output", "o"]);
-    let cfg = config_from_matches(matches).expect("create config");
+    let (cfg, _explicit) = config_from_matches(matches).expect("create config");
     assert!(!cfg.tree_only);
 }
 
@@ -413,7 +419,7 @@ fn test_unregistered_string_args_return_none() {
         .arg(Arg::new("output").long("output").num_args(1));
 
     let matches = app.get_matches_from(vec!["prog", "--directory", "d", "--output", "o"]);
-    let cfg = config_from_matches(matches).expect("create config");
+    let (cfg, _explicit) = config_from_matches(matches).expect("create config");
 
     assert!(cfg.include_dirs.is_none());
     assert!(cfg.exclude_dirs.is_none());

@@ -79,11 +79,7 @@ pub struct ExplicitFlags {
     pub tree_only: bool,
 }
 
-pub fn merge_config_with_explicit(
-    file: FileConfig,
-    cli: Config,
-    explicit: ExplicitFlags,
-) -> Config {
+pub fn merge_config(file: FileConfig, cli: Config, explicit: ExplicitFlags) -> Config {
     // For directory and output, prefer file value when the CLI did not explicitly set them.
     let directory = if explicit.directory {
         cli.directory
@@ -131,9 +127,7 @@ pub fn merge_config_with_explicit(
 /// Returns both the built `Config` and an `ExplicitFlags` struct that indicates
 /// which CLI values were actually provided on the command line (as opposed to
 /// being left as clap defaults).
-pub fn config_from_matches_with_explicit(
-    matches: clap::ArgMatches,
-) -> std::io::Result<(Config, ExplicitFlags)> {
+pub fn config_from_matches(matches: clap::ArgMatches) -> std::io::Result<(Config, ExplicitFlags)> {
     let directory_set = match matches.try_get_one::<String>("directory") {
         Ok(Some(_)) => true,
         Ok(None) => false,
