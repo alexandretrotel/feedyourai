@@ -119,6 +119,7 @@ mod tests {
             exclude_files: None,
             min_size: None,
             max_size: None,
+            respect_gitignore: true,
             tree_only: false,
         };
         let gitignore = create_gitignore_empty();
@@ -149,6 +150,7 @@ mod tests {
             exclude_files: None,
             min_size: None,
             max_size: None,
+            respect_gitignore: true,
             tree_only: false,
         };
 
@@ -180,6 +182,7 @@ mod tests {
             exclude_files: None,
             min_size: None,
             max_size: None,
+            respect_gitignore: true,
             tree_only: false,
         };
 
@@ -210,6 +213,7 @@ mod tests {
             exclude_files: None,
             min_size: None,
             max_size: None,
+            respect_gitignore: true,
             tree_only: false,
         };
 
@@ -235,8 +239,9 @@ mod tests {
             exclude_ext: None,
             include_files: None,
             exclude_files: None,
-            min_size: None,
+            min_size: Some(0),
             max_size: None,
+            respect_gitignore: true,
             tree_only: false,
         };
 
@@ -268,6 +273,7 @@ mod tests {
             exclude_files: None,
             min_size: None,
             max_size: None,
+            respect_gitignore: true,
             tree_only: false,
         };
 
@@ -296,6 +302,7 @@ mod tests {
             exclude_files: None,
             min_size: None,
             max_size: None,
+            respect_gitignore: true,
             tree_only: false,
         };
 
@@ -320,6 +327,7 @@ mod tests {
             exclude_files: None,
             min_size: Some(0),
             max_size: None,
+            respect_gitignore: true,
             tree_only: false,
         };
 
@@ -354,6 +362,7 @@ mod tests {
             exclude_files: None,
             min_size: Some(10000),
             max_size: Some(100000),
+            respect_gitignore: true,
             tree_only: false,
         };
 
@@ -390,6 +399,7 @@ mod tests {
             exclude_files: None,
             min_size: Some(0),
             max_size: None,
+            respect_gitignore: true,
             tree_only: false,
         };
 
@@ -423,6 +433,7 @@ mod tests {
             exclude_files: None,
             min_size: None,
             max_size: None,
+            respect_gitignore: true,
             tree_only: false,
         };
 
@@ -489,6 +500,7 @@ mod tests {
             exclude_files: None,
             min_size: None,
             max_size: None,
+            respect_gitignore: true,
             tree_only: false,
         };
 
@@ -537,6 +549,7 @@ mod tests {
             exclude_files: None,
             min_size: None,
             max_size: None,
+            respect_gitignore: true,
             tree_only: false,
         };
 
@@ -601,6 +614,7 @@ mod tests {
             exclude_files: None,
             min_size: None,
             max_size: None,
+            respect_gitignore: true,
             tree_only: false,
         };
 
@@ -669,13 +683,19 @@ mod tests {
             directory: PathBuf::from("."),
             output: PathBuf::from("out.txt"),
             include_dirs: None,
-            exclude_dirs: Some(vec!["tests".to_string()]),
+            exclude_dirs: Some(vec![
+                "node_modules".to_string(),
+                ".git".to_string(),
+                "tests".to_string(),
+                "target".to_string(),
+            ]),
             include_ext: None,
             exclude_ext: None,
             include_files: None,
             exclude_files: None,
             min_size: None,
             max_size: None,
+            respect_gitignore: true,
             tree_only: false,
         };
 
@@ -747,6 +767,7 @@ mod tests {
             exclude_files: None,
             min_size: None,
             max_size: None,
+            respect_gitignore: true,
             tree_only: false,
         };
 
@@ -794,6 +815,7 @@ mod tests {
             exclude_files: None,
             min_size: None,
             max_size: None,
+            respect_gitignore: true,
             tree_only: false,
         };
 

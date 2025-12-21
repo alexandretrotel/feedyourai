@@ -22,6 +22,7 @@ mod tests {
             exclude_files: None,
             min_size: None,
             max_size: None,
+            respect_gitignore: true,
             tree_only: false,
         };
         let gitignore = build_gitignore(temp_dir.path(), &IGNORED_FILES, &IGNORED_DIRS, &config)?;

@@ -48,6 +48,7 @@ mod tests {
                 exclude_files: None,
                 min_size: Some(0),
                 max_size: Some(1024),
+                respect_gitignore: true,
                 tree_only: false,
             }),
         };
