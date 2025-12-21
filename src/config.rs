@@ -58,8 +58,8 @@ pub fn discover_config_file() -> Option<PathBuf> {
     if local.exists() {
         return Some(local);
     }
-    if let Some(home) = dirs::home_dir() {
-        let global = home.join(".fyai").join("config.yaml");
+    if let Some(config_dir) = dirs::config_dir() {
+        let global = config_dir.join("fyai.yaml");
         if global.exists() {
             return Some(global);
         }

@@ -46,7 +46,7 @@ Run `fyai` in your terminal to combine files:
 You can specify options in a config file (YAML format):
 
 - **Local config:** `./fyai.yaml` (used if present in current directory)
-- **Global config:** `~/.fyai/config.yaml` (used if no local config found)
+- **Global config:** `~/.config/fyai.yaml` (used if no local config found)
 - **Precedence:** Local config overrides global config. CLI options override both config files.
 
 #### Example `fyai.yaml`
@@ -101,7 +101,7 @@ OPTIONS:
 CONFIG FILE SUPPORT:
     You can specify options in a config file (YAML format).
     Local config: ./fyai.yaml (used if present in current directory)
-    Global config: ~/.fyai/config.yaml (used if no local config found)
+    Global config: ~/.config/fyai.yaml (used if no local config found)
     CLI options override config file values.
     See README for details and examples.
 ```
