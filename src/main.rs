@@ -11,12 +11,36 @@ mod tests;
 
 mod cli;
 mod clipboard;
+mod config;
 mod data;
 mod file_processing;
 mod gitignore;
 
 fn main() -> io::Result<()> {
-    let config = parse_args()?;
+    // Parse CLI args first
+    let cli_config = parse_args()?;
+
+    // Discover and load config file if present
+    let file_config = match crate::config::discover_config_file() {
+        Some(path) => match crate::config::FileConfig::from_path(&path) {
+            Ok(cfg) => {
+                println!("Loaded config from: {}", path.display());
+                cfg
+            }
+            Err(e) => {
+                eprintln!(
+                    "Warning: Failed to load config file ({}): {}",
+                    path.display(),
+                    e
+                );
+                crate::config::FileConfig::default()
+            }
+        },
+        None => crate::config::FileConfig::default(),
+    };
+
+    // Merge configs (CLI takes precedence)
+    let config = crate::config::merge_config(file_config, cli_config);
 
     let gitignore = build_gitignore(&config.directory, IGNORED_FILES, IGNORED_DIRS, &config)?;
 
