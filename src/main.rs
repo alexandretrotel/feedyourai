@@ -1,7 +1,6 @@
-use std::io;
-
 use crate::clipboard::copy_to_clipboard;
 use crate::data::{IGNORED_DIRS, IGNORED_FILES};
+use crate::error::{AppError, AppResult};
 use crate::file_processing::{get_directory_structure, process_files};
 use crate::gitignore::build_gitignore;
 
@@ -12,14 +11,16 @@ mod cli;
 mod clipboard;
 mod config;
 mod data;
+mod error;
 mod file_processing;
 mod gitignore;
+mod repository;
 
 /// Run the core application logic using a fully-resolved `Config`.
 ///
 /// This function is extracted from `main` and made public so tests can call it
 /// directly with a controlled `Config`.
-pub fn run_with_config(config: crate::config::Config) -> io::Result<()> {
+pub fn run_with_config(config: crate::config::Config) -> AppResult<()> {
     let gitignore = build_gitignore(&config.directory, IGNORED_FILES, IGNORED_DIRS, &config)?;
 
     let dir_structure =
@@ -30,17 +31,40 @@ pub fn run_with_config(config: crate::config::Config) -> io::Result<()> {
         println!("Project tree written to {}", config.output.display());
     } else {
         process_files(&config, &gitignore, &dir_structure, IGNORED_DIRS)?;
-        copy_to_clipboard(&config.output)?;
+        let mut copied = true;
+        if let Err(err) = copy_to_clipboard(&config.output) {
+            if matches!(err, AppError::Clipboard(_)) && should_ignore_clipboard_error() {
+                copied = false;
+                eprintln!("Warning: clipboard unavailable; skipping copy. {}", err);
+            } else {
+                return Err(err);
+            }
+        }
         println!(
             "Files combined successfully into {}",
             config.output.display()
         );
-        println!("Output copied to clipboard successfully!");
+        if copied {
+            println!("Output copied to clipboard successfully!");
+        }
     }
     Ok(())
 }
 
-pub fn handle_init_subcommand(matches: &clap::ArgMatches) -> io::Result<bool> {
+fn should_ignore_clipboard_error() -> bool {
+    if std::env::var_os("CI").is_some() {
+        return true;
+    }
+    if cfg!(target_os = "linux") {
+        let has_display = std::env::var_os("DISPLAY").is_some()
+            || std::env::var_os("WAYLAND_DISPLAY").is_some()
+            || std::env::var_os("SWAYSOCK").is_some();
+        return !has_display;
+    }
+    false
+}
+
+pub fn handle_init_subcommand(matches: &clap::ArgMatches) -> AppResult<bool> {
     if let Some(sub_m) = matches.subcommand_matches("init") {
         let global = sub_m.get_flag("global");
         let force = sub_m.get_flag("force");
@@ -59,13 +83,7 @@ pub fn handle_init_subcommand(matches: &clap::ArgMatches) -> io::Result<bool> {
         };
 
         if path.exists() && !force {
-            return Err(io::Error::new(
-                io::ErrorKind::AlreadyExists,
-                format!(
-                    "Config file already exists at {}. Use --force to overwrite.",
-                    display_path
-                ),
-            ));
+            return Err(AppError::ConfigAlreadyExists { path: display_path });
         }
 
         let template = r#"# fyai.yaml - Configuration file for fyai
@@ -105,13 +123,17 @@ tree_only: false            # Only output directory tree, no file contents
     Ok(false)
 }
 
-fn main() -> io::Result<()> {
+fn main() -> AppResult<()> {
     let matches = crate::cli::create_commands().get_matches();
 
     // Handle init subcommand via helper so tests can call it directly.
     if handle_init_subcommand(&matches)? {
         return Ok(());
     }
+
+    let repo_url = matches.get_one::<String>("repo").cloned();
+    let repo_branch = matches.get_one::<String>("repo_branch").cloned();
+    let repo_commit = matches.get_one::<String>("repo_commit").cloned();
 
     // Normal flow: parse CLI args and config file
     // `config_from_matches_with_explicit` returns both the parsed CLI `Config` and an
@@ -139,6 +161,15 @@ fn main() -> io::Result<()> {
 
     // Merge configs (CLI takes precedence, but allow file to provide values when CLI didn't explicitly set them)
     let config = crate::config::merge_config(file_config, cli_config, explicit);
+
+    if let Some(repo_url) = repo_url {
+        return crate::repository::run_on_repository(
+            &repo_url,
+            repo_branch.as_deref(),
+            repo_commit.as_deref(),
+            config,
+        );
+    }
 
     // Delegate to the extracted function so it can be tested in isolation.
     run_with_config(config)

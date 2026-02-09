@@ -2,6 +2,7 @@
 mod tests {
     use std::path::PathBuf;
 
+    use crate::error::AppError;
     use crate::{cli::create_commands, config::config_from_matches};
 
     #[test]
@@ -100,7 +101,7 @@ mod tests {
         let result = config_from_matches(args);
 
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), "Invalid min-size");
+        assert!(matches!(result.unwrap_err(), AppError::InvalidMinSize));
     }
 
     #[test]
@@ -109,7 +110,7 @@ mod tests {
         let result = config_from_matches(args);
 
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), "Invalid max-size");
+        assert!(matches!(result.unwrap_err(), AppError::InvalidMaxSize));
     }
 
     #[test]

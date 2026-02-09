@@ -1,11 +1,11 @@
 use std::fs;
-use std::io;
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 
 use clap::{Arg, ArgAction, Command};
 
 use crate::config::{Config, FileConfig, config_from_matches, discover_config_file, merge_config};
+use crate::error::AppError;
 
 static TEST_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
@@ -46,7 +46,7 @@ respect_gitignore: false
 
 #[test]
 fn test_fileconfig_from_path_invalid_yaml() {
-    // invalid YAML should produce an io::Error with InvalidData
+    // invalid YAML should surface a structured YAML parse error
     let path = "./bad_fyai_config.yaml";
     fs::write(path, "not: [valid").expect("write bad yaml");
 
@@ -57,7 +57,7 @@ fn test_fileconfig_from_path_invalid_yaml() {
 
     assert!(res.is_err());
     let err = res.err().unwrap();
-    assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+    assert!(matches!(err, AppError::YamlParse { .. }));
 }
 
 #[test]
@@ -235,6 +235,8 @@ fn test_config_from_matches_invalid_min_size() {
 
     let res = config_from_matches(matches);
     assert!(res.is_err());
+    let err = res.unwrap_err();
+    assert!(matches!(err, AppError::InvalidMinSize));
 }
 
 // ---- New tests covering additional branches and error cases ----
@@ -357,8 +359,7 @@ fn test_missing_directory_error_message() {
     let res = config_from_matches(matches);
     assert!(res.is_err());
     let err = res.unwrap_err();
-    // The error message was constructed with "Missing directory"
-    assert!(err.to_string().to_lowercase().contains("missing directory"));
+    assert!(matches!(err, AppError::MissingDirectory));
 }
 
 #[test]
@@ -371,7 +372,7 @@ fn test_missing_output_error_message() {
     let res = config_from_matches(matches);
     assert!(res.is_err());
     let err = res.unwrap_err();
-    assert!(err.to_string().to_lowercase().contains("missing output"));
+    assert!(matches!(err, AppError::MissingOutput));
 }
 
 /// Additional tests to cover branches where args are registered-but-not-provided

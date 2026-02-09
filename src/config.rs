@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::io;
 use std::path::{Path, PathBuf};
+
+use crate::error::{AppError, AppResult};
 
 /// Main config struct used throughout the app.
 #[derive(Debug, PartialEq, Clone)]
@@ -39,14 +40,13 @@ pub struct FileConfig {
 
 impl FileConfig {
     /// Load config from a YAML file path.
-    pub fn from_path<P: AsRef<Path>>(path: P) -> io::Result<Self> {
-        let content = fs::read_to_string(path)?;
-        let config: FileConfig = serde_yaml::from_str(&content).map_err(|e| {
-            io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("YAML parse error: {}", e),
-            )
-        })?;
+    pub fn from_path<P: AsRef<Path>>(path: P) -> AppResult<Self> {
+        let content = fs::read_to_string(path.as_ref())?;
+        let config: FileConfig =
+            serde_yaml::from_str(&content).map_err(|e| AppError::YamlParse {
+                path: path.as_ref().to_path_buf(),
+                source: e,
+            })?;
         Ok(config)
     }
 }
@@ -127,7 +127,7 @@ pub fn merge_config(file: FileConfig, cli: Config, explicit: ExplicitFlags) -> C
 /// Returns both the built `Config` and an `ExplicitFlags` struct that indicates
 /// which CLI values were actually provided on the command line (as opposed to
 /// being left as clap defaults).
-pub fn config_from_matches(matches: clap::ArgMatches) -> std::io::Result<(Config, ExplicitFlags)> {
+pub fn config_from_matches(matches: clap::ArgMatches) -> AppResult<(Config, ExplicitFlags)> {
     let directory_set = match matches.try_get_one::<String>("directory") {
         Ok(Some(_)) => true,
         Ok(None) => false,
@@ -151,24 +151,14 @@ pub fn config_from_matches(matches: clap::ArgMatches) -> std::io::Result<(Config
 
     let directory = matches
         .try_get_one::<String>("directory")
-        .map_err(|e| {
-            std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                format!("Missing directory: {}", e),
-            )
-        })?
-        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidInput, "Missing directory"))?
+        .map_err(|_| AppError::MissingDirectory)?
+        .ok_or(AppError::MissingDirectory)?
         .into();
 
     let output = matches
         .try_get_one::<String>("output")
-        .map_err(|e| {
-            std::io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!("Missing output: {}", e),
-            )
-        })?
-        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidInput, "Missing output"))?
+        .map_err(|_| AppError::MissingOutput)?
+        .ok_or(AppError::MissingOutput)?
         .into();
 
     let include_dirs = match matches.try_get_one::<String>("include_dirs") {
@@ -234,17 +224,13 @@ pub fn config_from_matches(matches: clap::ArgMatches) -> std::io::Result<(Config
     };
 
     let min_size = match matches.try_get_one::<String>("min_size") {
-        Ok(Some(s)) => Some(s.parse::<u64>().map_err(|_| {
-            std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid min-size")
-        })?),
+        Ok(Some(s)) => Some(s.parse::<u64>().map_err(|_| AppError::InvalidMinSize)?),
         Ok(None) => None,
         Err(_) => None,
     };
 
     let max_size = match matches.try_get_one::<String>("max_size") {
-        Ok(Some(s)) => Some(s.parse::<u64>().map_err(|_| {
-            std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid max-size")
-        })?),
+        Ok(Some(s)) => Some(s.parse::<u64>().map_err(|_| AppError::InvalidMaxSize)?),
         Ok(None) => None,
         Err(_) => None,
     };
