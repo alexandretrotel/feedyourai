@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.7.1 - 2026-02-09
+
+Changed
+- Updated dependencies: thiserror 1.0 -> 2.0.18.
+
 ## 1.7.0 - 2026-02-09
 
 Added
