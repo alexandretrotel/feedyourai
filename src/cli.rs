@@ -24,7 +24,7 @@ pub fn create_commands() -> Command {
             Arg::new("repo")
                 .long("repo")
                 .value_name("URL")
-                .help("Clone a git repository (GitHub/GitLab) into a temporary directory before processing"),
+                .help("Clone a git repository (GitHub/GitLab) into a temporary directory before processing").conflicts_with("directory"),
         )
         .arg(
             Arg::new("repo_branch")
