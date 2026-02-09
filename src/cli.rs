@@ -21,6 +21,18 @@ pub fn create_commands() -> Command {
                 .default_value("fyai.txt"),
         )
         .arg(
+            Arg::new("repo")
+                .long("repo")
+                .value_name("URL")
+                .help("Clone a git repository (GitHub/GitLab) into a temporary directory before processing"),
+        )
+        .arg(
+            Arg::new("repo_branch")
+                .long("repo-branch")
+                .value_name("BRANCH")
+                .help("Branch, tag, or commit to checkout when using --repo"),
+        )
+        .arg(
             Arg::new("include_dirs")
                 .long("include-dirs")
                 .value_name("DIRS")

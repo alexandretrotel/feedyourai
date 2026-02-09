@@ -14,6 +14,7 @@ mod config;
 mod data;
 mod file_processing;
 mod gitignore;
+mod repository;
 
 /// Run the core application logic using a fully-resolved `Config`.
 ///
@@ -113,6 +114,9 @@ fn main() -> io::Result<()> {
         return Ok(());
     }
 
+    let repo_url = matches.get_one::<String>("repo").cloned();
+    let repo_branch = matches.get_one::<String>("repo_branch").cloned();
+
     // Normal flow: parse CLI args and config file
     // `config_from_matches_with_explicit` returns both the parsed CLI `Config` and an
     // `ExplicitFlags` struct indicating which CLI options were explicitly set.
@@ -139,6 +143,10 @@ fn main() -> io::Result<()> {
 
     // Merge configs (CLI takes precedence, but allow file to provide values when CLI didn't explicitly set them)
     let config = crate::config::merge_config(file_config, cli_config, explicit);
+
+    if let Some(repo_url) = repo_url {
+        return crate::repository::run_on_repository(&repo_url, repo_branch.as_deref(), config);
+    }
 
     // Delegate to the extracted function so it can be tested in isolation.
     run_with_config(config)

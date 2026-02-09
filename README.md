@@ -85,6 +85,8 @@ USAGE:
 OPTIONS:
     -d, --dir <DIR>                Sets the input directory [default: .]
     -o, --output <FILE>            Sets the output file [default: fyai.txt]
+        --repo <URL>               Clone a git repository (e.g., GitHub/GitLab) into a temporary directory before processing
+        --repo-branch <BRANCH>     Branch, tag, or commit to checkout when using --repo
         --include-dirs <DIRS>      Comma-separated list of directories to include (e.g., src,docs)
     -x, --exclude-dirs <DIRS>      Comma-separated list of directories to exclude (e.g., node_modules,dist)
         --include-files <FILES>    Comma-separated list of files to include (e.g., README.md,main.rs)
@@ -153,6 +155,12 @@ CONFIG FILE SUPPORT:
 - Ignore .gitignore rules and include all files (even those normally excluded):
   ```bash
   fyai --respect-gitignore false
+  ```
+
+- Run against a remote GitHub/GitLab repository without leaving the clone on disk:
+
+  ```bash
+  fyai --repo https://github.com/owner/repo.git --repo-branch main
   ```
 
 ## Output Format
