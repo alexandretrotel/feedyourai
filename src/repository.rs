@@ -40,11 +40,7 @@ pub(crate) fn clone_repository(
     Ok((temp_dir, clone_path))
 }
 
-pub fn run_on_repository(
-    repo_url: &str,
-    branch: Option<&str>,
-    config: Config,
-) -> io::Result<()> {
+pub fn run_on_repository(repo_url: &str, branch: Option<&str>, config: Config) -> io::Result<()> {
     let (temp_dir, clone_path) = clone_repository(repo_url, branch)?;
 
     let mut config = config;

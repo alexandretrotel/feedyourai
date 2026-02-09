@@ -17,7 +17,10 @@ fn init_sample_repo() -> TempDir {
         .expect("init git repo");
     assert!(status.success(), "git init failed");
 
-    for (key, value) in [("user.email", "test@example.com"), ("user.name", "Test User")] {
+    for (key, value) in [
+        ("user.email", "test@example.com"),
+        ("user.name", "Test User"),
+    ] {
         let status = Command::new("git")
             .args(["config", key, value])
             .current_dir(repo_dir.path())
@@ -26,8 +29,7 @@ fn init_sample_repo() -> TempDir {
         assert!(status.success(), "git config {key} failed", key = key);
     }
 
-    fs::write(repo_dir.path().join("README.md"), "hello remote repo")
-        .expect("write README.md");
+    fs::write(repo_dir.path().join("README.md"), "hello remote repo").expect("write README.md");
 
     let status = Command::new("git")
         .args(["add", "."])
