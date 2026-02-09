@@ -133,6 +133,7 @@ fn main() -> AppResult<()> {
 
     let repo_url = matches.get_one::<String>("repo").cloned();
     let repo_branch = matches.get_one::<String>("repo_branch").cloned();
+    let repo_commit = matches.get_one::<String>("repo_commit").cloned();
 
     // Normal flow: parse CLI args and config file
     // `config_from_matches_with_explicit` returns both the parsed CLI `Config` and an
@@ -162,7 +163,12 @@ fn main() -> AppResult<()> {
     let config = crate::config::merge_config(file_config, cli_config, explicit);
 
     if let Some(repo_url) = repo_url {
-        return crate::repository::run_on_repository(&repo_url, repo_branch.as_deref(), config);
+        return crate::repository::run_on_repository(
+            &repo_url,
+            repo_branch.as_deref(),
+            repo_commit.as_deref(),
+            config,
+        );
     }
 
     // Delegate to the extracted function so it can be tested in isolation.

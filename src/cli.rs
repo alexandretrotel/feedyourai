@@ -30,7 +30,15 @@ pub fn create_commands() -> Command {
             Arg::new("repo_branch")
                 .long("repo-branch")
                 .value_name("BRANCH")
-                .help("Branch, tag, or commit to checkout when using --repo"),
+                .help("Branch or tag to checkout when using --repo")
+                .requires("repo"),
+        )
+        .arg(
+            Arg::new("repo_commit")
+                .long("repo-commit")
+                .value_name("COMMIT")
+                .help("Commit SHA to checkout when using --repo")
+                .requires("repo"),
         )
         .arg(
             Arg::new("include_dirs")

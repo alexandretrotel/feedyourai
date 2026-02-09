@@ -40,4 +40,10 @@ pub enum AppError {
 
     #[error("git clone failed: {0}")]
     GitCloneFailed(String),
+
+    #[error("Failed to run git checkout: {0}")]
+    GitCheckoutExec(#[source] io::Error),
+
+    #[error("git checkout failed: {0}")]
+    GitCheckoutFailed(String),
 }

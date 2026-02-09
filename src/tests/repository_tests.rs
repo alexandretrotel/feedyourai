@@ -48,6 +48,16 @@ fn init_sample_repo() -> TempDir {
     repo_dir
 }
 
+fn get_head_commit(repo_dir: &TempDir) -> String {
+    let output = Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .current_dir(repo_dir.path())
+        .output()
+        .expect("git rev-parse");
+    assert!(output.status.success(), "git rev-parse failed");
+    String::from_utf8_lossy(&output.stdout).trim().to_string()
+}
+
 #[test]
 fn run_on_repository_processes_remote_repo() {
     let remote_repo = init_sample_repo();
@@ -62,9 +72,37 @@ fn run_on_repository_processes_remote_repo() {
             .to_str()
             .expect("repo path should be valid UTF-8"),
         None,
+        None,
         config,
     )
     .expect("run_on_repository should succeed");
+
+    let contents = fs::read_to_string(&output_path).expect("read output file");
+    assert!(
+        contents.contains("README.md") && contents.contains("hello remote repo"),
+        "output should include cloned file contents"
+    );
+}
+
+#[test]
+fn run_on_repository_supports_commit() {
+    let remote_repo = init_sample_repo();
+    let commit = get_head_commit(&remote_repo);
+    let output_dir = TempDir::new().expect("create output temp dir");
+    let output_path = output_dir.path().join("combined.txt");
+
+    let config = create_test_config(PathBuf::from("."), output_path.clone(), |_| {});
+
+    run_on_repository(
+        remote_repo
+            .path()
+            .to_str()
+            .expect("repo path should be valid UTF-8"),
+        None,
+        Some(&commit),
+        config,
+    )
+    .expect("run_on_repository should succeed with commit");
 
     let contents = fs::read_to_string(&output_path).expect("read output file");
     assert!(
@@ -82,6 +120,7 @@ fn clone_repository_cleans_up_temp_dir() {
                 .path()
                 .to_str()
                 .expect("repo path should be valid UTF-8"),
+            None,
             None,
         )
         .expect("clone_repository should succeed");
