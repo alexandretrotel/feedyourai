@@ -1,4 +1,4 @@
-use clipboard::{ClipboardContext, ClipboardProvider};
+use clippers::Clipboard;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
@@ -10,11 +10,9 @@ pub fn copy_to_clipboard(output_path: &Path) -> AppResult<()> {
     let mut output_contents = String::new();
     File::open(output_path)?.read_to_string(&mut output_contents)?;
 
-    let mut clipboard: ClipboardContext =
-        ClipboardProvider::new().map_err(|e| AppError::Clipboard(e.to_string()))?;
-
+    let mut clipboard = Clipboard::get();
     clipboard
-        .set_contents(output_contents)
+        .write_text(&output_contents)
         .map_err(|e| AppError::Clipboard(e.to_string()))?;
 
     Ok(())
