@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.7.2 - 2026-02-09
+
+Changed
+- Replaced `clipboard` with `arboard` to avoid the `xcb` dependency and CMake build step.
+
 ## 1.7.1 - 2026-02-09
 
 Changed
