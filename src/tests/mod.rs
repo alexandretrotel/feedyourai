@@ -13,3 +13,5 @@ mod file_processing_tests;
 mod gitignore_tests;
 #[cfg(test)]
 mod main_tests;
+#[cfg(test)]
+mod repository_tests;
