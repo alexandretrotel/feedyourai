@@ -1,13 +1,14 @@
-use std::{io, path::PathBuf, process::Command};
+use std::{path::PathBuf, process::Command};
 
 use tempfile::TempDir;
 
 use crate::config::Config;
+use crate::error::{AppError, AppResult};
 
 pub(crate) fn clone_repository(
     repo_url: &str,
     branch: Option<&str>,
-) -> io::Result<(TempDir, PathBuf)> {
+) -> AppResult<(TempDir, PathBuf)> {
     let temp_dir = tempfile::tempdir()?;
     let clone_path = temp_dir.path().join("repo");
 
@@ -18,29 +19,27 @@ pub(crate) fn clone_repository(
     }
     cmd.arg(repo_url).arg(&clone_path);
 
-    let output = cmd
-        .output()
-        .map_err(|e| io::Error::other(format!("Failed to run git clone: {e}")))?;
+    let output = cmd.output().map_err(AppError::GitCloneExec)?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        let mut msg = String::from("git clone failed");
         let details = if !stderr.trim().is_empty() {
             stderr.trim()
         } else {
             stdout.trim()
         };
-        if !details.is_empty() {
-            msg.push_str(": ");
-            msg.push_str(details);
-        }
-        return Err(io::Error::other(msg));
+        let details = if details.is_empty() {
+            "unknown error"
+        } else {
+            details
+        };
+        return Err(AppError::GitCloneFailed(details.to_string()));
     }
 
     Ok((temp_dir, clone_path))
 }
 
-pub fn run_on_repository(repo_url: &str, branch: Option<&str>, config: Config) -> io::Result<()> {
+pub fn run_on_repository(repo_url: &str, branch: Option<&str>, config: Config) -> AppResult<()> {
     let (temp_dir, clone_path) = clone_repository(repo_url, branch)?;
 
     let mut config = config;

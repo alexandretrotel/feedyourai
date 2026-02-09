@@ -1,11 +1,12 @@
 use std::{
-    env, fs, io,
+    env, fs,
     path::PathBuf,
     sync::{Mutex, OnceLock},
 };
 use tempfile::TempDir;
 
 use crate::cli::create_commands;
+use crate::error::AppError;
 
 static SERIALIZE_TESTS: OnceLock<Mutex<()>> = OnceLock::new();
 
@@ -80,7 +81,7 @@ fn test_init_already_exists_without_force_errors() {
         "Expected error when config exists and --force not provided"
     );
     let err = res.unwrap_err();
-    assert_eq!(err.kind(), io::ErrorKind::AlreadyExists);
+    assert!(matches!(err, AppError::ConfigAlreadyExists { .. }));
 }
 
 #[test]
