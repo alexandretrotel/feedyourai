@@ -79,9 +79,9 @@ fn test_discover_config_file_local() {
 #[test]
 fn test_discover_config_file_global() {
     let _lock = test_lock();
-    // Use the system config dir returned by `dirs::config_dir()` instead of modifying env vars.
+    // Use the system config dir instead of modifying env vars.
     // If the system doesn't provide one, skip the test.
-    if let Some(config_dir) = dirs::config_dir() {
+    if let Some(config_dir) = crate::config::system_config_dir() {
         let cfg_path = config_dir.join("fyai.yaml");
 
         // Ensure parent exists
@@ -118,7 +118,7 @@ fn test_discover_config_file_global() {
         assert_eq!(found.unwrap(), cfg_path);
     } else {
         // Cannot run this test on platforms without a config dir; skip gracefully.
-        eprintln!("dirs::config_dir() returned None; skipping global discover test");
+        eprintln!("system_config_dir() returned None; skipping global discover test");
     }
 }
 

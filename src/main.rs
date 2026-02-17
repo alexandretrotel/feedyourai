@@ -70,9 +70,8 @@ pub fn handle_init_subcommand(matches: &clap::ArgMatches) -> AppResult<bool> {
         let force = sub_m.get_flag("force");
 
         let (path, display_path) = if global {
-            let cfg_dir = dirs::config_dir()
-                .or_else(|| dirs::home_dir().map(|h| h.join(".config")))
-                .expect("Could not determine config directory");
+            let cfg_dir =
+                crate::config::system_config_dir().expect("Could not determine config directory");
             std::fs::create_dir_all(&cfg_dir)?;
             let mut cfg_path = cfg_dir.clone();
             cfg_path.push("fyai.yaml");

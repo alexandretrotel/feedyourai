@@ -3,6 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::error::{AppError, AppResult};
+use directories_next::BaseDirs;
 
 /// Main config struct used throughout the app.
 #[derive(Debug, PartialEq, Clone)]
@@ -58,13 +59,17 @@ pub fn discover_config_file() -> Option<PathBuf> {
     if local.exists() {
         return Some(local);
     }
-    if let Some(config_dir) = dirs::config_dir() {
+    if let Some(config_dir) = system_config_dir() {
         let global = config_dir.join("fyai.yaml");
         if global.exists() {
             return Some(global);
         }
     }
     None
+}
+
+pub fn system_config_dir() -> Option<PathBuf> {
+    BaseDirs::new().map(|dirs| dirs.config_dir().to_path_buf())
 }
 
 /// Merge FileConfig with CLI Config.

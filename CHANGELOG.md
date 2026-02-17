@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.7.3 - 2026-02-17
+
+Changed
+- Replaced `dirs` with `directories-next` for locating system config directories.
+
 ## 1.7.2 - 2026-02-09
 
 Changed
