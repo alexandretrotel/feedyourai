@@ -307,6 +307,7 @@ dependencies = [
 name = "feedyourai"
 version = "1.7.2"
 dependencies = [
+ "anyhow",
  "arboard",
  "clap",
  "dirs",
