@@ -8,7 +8,7 @@ A command-line tool to combine files from a directory into a single file for AI 
 
 - Combines multiple text files into one output file
 - Can process a remote git repository in a temporary directory
-- Supports configuration via CLI options **and config files** (YAML)
+- Supports configuration via CLI options and config files (YAML)
 - Filters files by:
   - Size
   - File extensions (e.g., `.txt`, `.md`)
@@ -20,10 +20,6 @@ A command-line tool to combine files from a directory into a single file for AI 
 
 ## Installation
 
-### Prerequisites
-
-- [Rust](https://www.rust-lang.org/tools/install) (latest stable version recommended)
-
 ### Install via Cargo
 
 ```bash
@@ -33,7 +29,7 @@ cargo install feedyourai
 Or,
 
 ```bash
-cargo install --git https://github.com/alexandretrotel/feedyourai.git
+cargo install --git https://github.com/atrtde/feedyourai.git
 ```
 
 This installs the `fyai` binary to `~/.cargo/bin/`. Ensure this directory is in your `PATH`.
@@ -47,8 +43,14 @@ Run `fyai` in your terminal to combine files:
 You can specify options in a config file (YAML format):
 
 - **Local config:** `./fyai.yaml` (used if present in current directory)
-- **Global config:** `~/.config/fyai.yaml` (used if no local config found)
+- **Global config:** System config directory (platform-specific), used if no local config found
 - **Precedence:** Local config overrides global config. CLI options override both config files.
+
+To see the exact global config path on your system, run:
+
+```bash
+fyai init --global
+```
 
 #### Example `fyai.yaml`
 
@@ -73,46 +75,10 @@ All CLI options can be set in the config file. CLI flags always take precedence.
 
 ```bash
 fyai
+fyai --help # show help
 ```
 
 - Combines all files from the current directory into `fyai.txt`
-
-### Options
-
-```
-USAGE:
-    fyai [OPTIONS] [SUBCOMMAND]
-
-OPTIONS:
-    -d, --dir <DIR>                Sets the input directory [default: .]
-    -o, --output <FILE>            Sets the output file [default: fyai.txt]
-        --repo <URL>               Clone a git repository (e.g., GitHub/GitLab) into a temporary directory before processing
-        --repo-branch <BRANCH>     Branch or tag to checkout when using --repo
-        --repo-commit <COMMIT>     Commit SHA to checkout when using --repo
-        --include-dirs <DIRS>      Comma-separated list of directories to include (e.g., src,docs)
-    -x, --exclude-dirs <DIRS>      Comma-separated list of directories to exclude (e.g., node_modules,dist)
-        --include-files <FILES>    Comma-separated list of files to include (e.g., README.md,main.rs)
-        --exclude-files <FILES>    Comma-separated list of files to exclude (e.g., LICENSE,config.json)
-        --include-ext <EXT>        Comma-separated list of file extensions to include (e.g., txt,md)
-    -e, --exclude-ext <EXT>        Comma-separated list of file extensions to exclude (e.g., log,tmp)
-    -n, --min-size <BYTES>         Exclude files smaller than this size in bytes
-    -m, --max-size <BYTES>         Exclude files larger than this size in bytes
-        --respect-gitignore <BOOL> Whether to respect .gitignore rules (true/false) [default: true]
-        --tree-only                Only output the project directory tree, no file contents
-    -t, --test                     Run in test mode
-    -h, --help                     Print help information
-    -V, --version                  Print version information
-
-CONFIG FILE SUPPORT:
-    You can specify options in a config file (YAML format).
-    Local config: ./fyai.yaml (used if present in current directory)
-    Global config: ~/.config/fyai.yaml (used if no local config found)
-    CLI options override config file values.
-    See README for details and examples.
-
-SUBCOMMANDS:
-    init    Generate a template fyai.yaml config file
-```
 
 ### Examples
 
@@ -203,7 +169,7 @@ Contributions are welcome! Please:
 
 ## License
 
-This project is licensed under the MIT License.
+MIT. See [LICENSE](LICENSE) for more details.
 
 ## Changelog
 
