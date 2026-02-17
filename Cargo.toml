@@ -4,11 +4,11 @@ version = "1.7.2"
 edition = "2024"
 description = "A tool to combine text files for AI processing with flexible filtering options."
 authors = ["atrtde"]
-license = "MIT"
-homepage = "https://github.com/alexandretrotel/feedyourai"
-repository = "https://github.com/alexandretrotel/feedyourai"
-documentation = "https://github.com/alexandretrotel/feedyourai"
+homepage = "https://github.com/atrtde/feedyourai"
+repository = "https://github.com/atrtde/feedyourai"
+documentation = "https://github.com/atrtde/feedyourai"
 exclude = ["assets/*", ".github/*"]
+license = "MIT"
 
 [[bin]]
 name = "fyai"
