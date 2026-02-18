@@ -2,10 +2,10 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::error::{AppError, AppResult};
+use crate::errors::{AppError, AppResult};
+use clap::parser::ValueSource;
 use directories_next::BaseDirs;
 
-/// Main config struct used throughout the app.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Config {
     pub directory: PathBuf,
@@ -22,7 +22,6 @@ pub struct Config {
     pub tree_only: bool,
 }
 
-/// Struct for deserializing YAML config file.
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct FileConfig {
     pub directory: Option<String>,
@@ -40,7 +39,6 @@ pub struct FileConfig {
 }
 
 impl FileConfig {
-    /// Load config from a YAML file path.
     pub fn from_path<P: AsRef<Path>>(path: P) -> AppResult<Self> {
         let content = fs::read_to_string(path.as_ref())?;
         let config: FileConfig =
@@ -52,8 +50,6 @@ impl FileConfig {
     }
 }
 
-/// Discover config file location based on precedence.
-/// Returns Some(path) if found, None otherwise.
 pub fn discover_config_file() -> Option<PathBuf> {
     let local = PathBuf::from("./fyai.yaml");
     if local.exists() {
@@ -72,10 +68,6 @@ pub fn system_config_dir() -> Option<PathBuf> {
     BaseDirs::new().map(|dirs| dirs.config_dir().to_path_buf())
 }
 
-/// Merge FileConfig with CLI Config.
-///
-/// The merge accepts an `ExplicitFlags` argument which indicates which CLI
-/// values were explicitly set by the user.
 #[derive(Debug, Clone, Copy)]
 pub struct ExplicitFlags {
     pub directory: bool,
@@ -85,7 +77,6 @@ pub struct ExplicitFlags {
 }
 
 pub fn merge_config(file: FileConfig, cli: Config, explicit: ExplicitFlags) -> Config {
-    // For directory and output, prefer file value when the CLI did not explicitly set them.
     let directory = if explicit.directory {
         cli.directory
     } else {
@@ -98,7 +89,6 @@ pub fn merge_config(file: FileConfig, cli: Config, explicit: ExplicitFlags) -> C
         file.output.map(PathBuf::from).unwrap_or(cli.output)
     };
 
-    // For booleans, use file value when CLI did not explicitly set the flag.
     let respect_gitignore = if explicit.respect_gitignore {
         cli.respect_gitignore
     } else {
@@ -127,32 +117,12 @@ pub fn merge_config(file: FileConfig, cli: Config, explicit: ExplicitFlags) -> C
     }
 }
 
-/// Create Config from clap ArgMatches
-///
-/// Returns both the built `Config` and an `ExplicitFlags` struct that indicates
-/// which CLI values were actually provided on the command line (as opposed to
-/// being left as clap defaults).
 pub fn config_from_matches(matches: clap::ArgMatches) -> AppResult<(Config, ExplicitFlags)> {
-    let directory_set = match matches.try_get_one::<String>("directory") {
-        Ok(Some(_)) => true,
-        Ok(None) => false,
-        Err(_) => false,
-    };
-    let output_set = match matches.try_get_one::<String>("output") {
-        Ok(Some(_)) => true,
-        Ok(None) => false,
-        Err(_) => false,
-    };
-    let respect_gitignore_set = match matches.try_get_one::<String>("respect_gitignore") {
-        Ok(Some(_)) => true,
-        Ok(None) => false,
-        Err(_) => false,
-    };
-    let tree_only_set = match matches.try_get_one::<bool>("tree_only") {
-        Ok(Some(_)) => true,
-        Ok(None) => false,
-        Err(_) => false,
-    };
+    let directory_set = matches.value_source("directory") == Some(ValueSource::CommandLine);
+    let output_set = matches.value_source("output") == Some(ValueSource::CommandLine);
+    let respect_gitignore_set =
+        matches.value_source("respect_gitignore") == Some(ValueSource::CommandLine);
+    let tree_only_set = matches.value_source("tree_only") == Some(ValueSource::CommandLine);
 
     let directory = matches
         .try_get_one::<String>("directory")
@@ -228,25 +198,30 @@ pub fn config_from_matches(matches: clap::ArgMatches) -> AppResult<(Config, Expl
         Err(_) => None,
     };
 
-    let min_size = match matches.try_get_one::<String>("min_size") {
-        Ok(Some(s)) => Some(s.parse::<u64>().map_err(|_| AppError::InvalidMinSize)?),
-        Ok(None) => None,
-        Err(_) => None,
+    let min_size = match matches.try_get_one::<u64>("min_size") {
+        Ok(Some(value)) => Some(*value),
+        Ok(None) | Err(_) => match matches.try_get_one::<String>("min_size") {
+            Ok(Some(s)) => Some(s.parse::<u64>().map_err(|_| AppError::InvalidMinSize)?),
+            Ok(None) | Err(_) => None,
+        },
     };
 
-    let max_size = match matches.try_get_one::<String>("max_size") {
-        Ok(Some(s)) => Some(s.parse::<u64>().map_err(|_| AppError::InvalidMaxSize)?),
-        Ok(None) => None,
-        Err(_) => None,
+    let max_size = match matches.try_get_one::<u64>("max_size") {
+        Ok(Some(value)) => Some(*value),
+        Ok(None) | Err(_) => match matches.try_get_one::<String>("max_size") {
+            Ok(Some(s)) => Some(s.parse::<u64>().map_err(|_| AppError::InvalidMaxSize)?),
+            Ok(None) | Err(_) => None,
+        },
     };
 
-    let respect_gitignore = match matches.try_get_one::<String>("respect_gitignore") {
-        Ok(Some(s)) => s == "true" || s == "1",
-        Ok(None) => true,
-        Err(_) => true,
+    let respect_gitignore = match matches.try_get_one::<bool>("respect_gitignore") {
+        Ok(Some(flag)) => *flag,
+        Ok(None) | Err(_) => match matches.try_get_one::<String>("respect_gitignore") {
+            Ok(Some(s)) => s == "true" || s == "1",
+            Ok(None) | Err(_) => true,
+        },
     };
 
-    // For flags, use try_get_one to safely handle whether the arg is registered
     let tree_only = match matches.try_get_one::<bool>("tree_only") {
         Ok(Some(b)) => *b,
         Ok(None) => false,
