@@ -1,8 +1,8 @@
-use ignore::gitignore::Gitignore;
+use ignore::overrides::{Override, OverrideBuilder};
+use ignore::{Walk, WalkBuilder};
 use std::fs::{self, File};
 use std::io::{self, Read, Write};
 use std::path::Path;
-use walkdir::WalkDir;
 
 use crate::config::Config;
 
@@ -83,10 +83,84 @@ fn is_ext_included_excluded(
     }
 }
 
+fn build_overrides(
+    root: &Path,
+    ignored_files: &[&str],
+    ignored_dirs: &[&str],
+    config: &Config,
+) -> io::Result<Override> {
+    let mut builder = OverrideBuilder::new(root);
+    builder.case_insensitive(true).map_err(|err| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("override case sensitivity: {err}"),
+        )
+    })?;
+
+    for file in ignored_files {
+        let pattern = format!("!{file}");
+        builder.add(&pattern).map_err(|err| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("override {pattern}: {err}"),
+            )
+        })?;
+    }
+
+    for dir in ignored_dirs {
+        let pattern = format!("!{dir}/");
+        builder.add(&pattern).map_err(|err| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("override {pattern}: {err}"),
+            )
+        })?;
+    }
+
+    if let Some(exclude_dirs) = &config.exclude_dirs {
+        for dir in exclude_dirs {
+            let pattern = format!("!{dir}/");
+            builder.add(&pattern).map_err(|err| {
+                io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    format!("override {pattern}: {err}"),
+                )
+            })?;
+        }
+    }
+
+    builder.build().map_err(|err| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("override build: {err}"),
+        )
+    })
+}
+
+fn build_walker(
+    root: &Path,
+    ignored_files: &[&str],
+    ignored_dirs: &[&str],
+    config: &Config,
+) -> io::Result<Walk> {
+    let mut builder = WalkBuilder::new(root);
+    builder.standard_filters(true);
+    if !config.respect_gitignore {
+        builder
+            .ignore(false)
+            .git_ignore(false)
+            .git_global(false)
+            .git_exclude(false)
+            .parents(false);
+    }
+    builder.overrides(build_overrides(root, ignored_files, ignored_dirs, config)?);
+    Ok(builder.build())
+}
+
 /// Generates a string representation of the project directory structure.
 pub fn get_directory_structure(
     root: &Path,
-    gitignore: &Gitignore,
+    ignored_files: &[&str],
     ignored_dirs: &[&str],
     config: &Config,
 ) -> io::Result<String> {
@@ -101,9 +175,14 @@ pub fn get_directory_structure(
 
     let output_canon = fs::canonicalize(&config.output).ok();
 
-    for entry in WalkDir::new(root).into_iter().filter_map(Result::ok) {
+    let walker = build_walker(root, ignored_files, ignored_dirs, config)?;
+    for entry in walker {
+        let entry = entry.map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
         let path = entry.path();
-        let is_dir = path.is_dir();
+        let is_dir = entry
+            .file_type()
+            .map(|file_type| file_type.is_dir())
+            .unwrap_or_else(|| path.is_dir());
 
         if let Some(output_canon) = output_canon.as_ref()
             && let Ok(path_canon) = fs::canonicalize(path)
@@ -112,7 +191,7 @@ pub fn get_directory_structure(
             continue;
         }
 
-        if should_skip_path_advanced(path, is_dir, gitignore, ignored_dirs, config) {
+        if should_skip_path_advanced(path, is_dir, ignored_dirs, config) {
             continue;
         }
 
@@ -131,8 +210,8 @@ pub fn get_directory_structure(
 /// Processes files in the input directory and combines them into the output file.
 pub fn process_files(
     config: &Config,
-    gitignore: &Gitignore,
     dir_structure: &str,
+    ignored_files: &[&str],
     ignored_dirs: &[&str],
 ) -> io::Result<()> {
     let mut output = File::create(&config.output)?;
@@ -142,10 +221,9 @@ pub fn process_files(
 
     let output_canon = fs::canonicalize(&config.output).ok();
 
-    for entry in WalkDir::new(&config.directory)
-        .into_iter()
-        .filter_map(Result::ok)
-    {
+    let walker = build_walker(&config.directory, ignored_files, ignored_dirs, config)?;
+    for entry in walker {
+        let entry = entry.map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
         let path = entry.path();
         if let Some(output_canon) = output_canon.as_ref() {
             if let Ok(path_canon) = fs::canonicalize(path)
@@ -157,9 +235,12 @@ pub fn process_files(
             continue;
         }
 
-        let is_dir = path.is_dir();
+        let is_dir = entry
+            .file_type()
+            .map(|file_type| file_type.is_dir())
+            .unwrap_or_else(|| path.is_dir());
 
-        if should_skip_path_advanced(path, is_dir, gitignore, ignored_dirs, config) {
+        if should_skip_path_advanced(path, is_dir, ignored_dirs, config) {
             continue;
         }
 
@@ -225,14 +306,11 @@ pub fn process_files(
 
 /// Determines if a path should be skipped during file processing, using advanced config.
 ///
-/// This function checks if a path should be excluded from processing based on:
-/// 1. User-specified ignored directories (case-insensitive matching)
-/// 2. Custom exclude directories provided via CLI configuration
-/// 3. Gitignore rules that apply to the path
+/// This function checks if a path should be excluded from processing based on
+/// include/exclude rules and file/extension filters.
 pub fn should_skip_path_advanced(
     path: &Path,
     is_dir: bool,
-    gitignore: &Gitignore,
     ignored_dirs: &[&str],
     config: &Config,
 ) -> bool {
@@ -241,10 +319,6 @@ pub fn should_skip_path_advanced(
         return true;
     }
     if is_in_ignored_dir(path, ignored_dirs, &config.exclude_dirs) {
-        return true;
-    }
-    // .gitignore (only if respect_gitignore is true)
-    if config.respect_gitignore && gitignore.matched(path, is_dir).is_ignore() {
         return true;
     }
     // File filtering (only for files)
