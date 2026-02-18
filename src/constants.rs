@@ -1,4 +1,3 @@
-/// Files to ignore during directory scanning and processing.
 pub const IGNORED_FILES: &[&str] = &[
     ".DS_Store",
     "bun.lock",
@@ -10,7 +9,6 @@ pub const IGNORED_FILES: &[&str] = &[
     "yarn.lock",
 ];
 
-/// Directories to ignore during directory scanning and processing.
 pub const IGNORED_DIRS: &[&str] = &[
     ".cache",
     ".changeset",
