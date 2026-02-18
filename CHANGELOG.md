@@ -2,9 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
-## 1.7.3 - 2026-02-17
+## 2.0.0 - 2026-02-18
 
 Changed
+- Switched traversal to `ignore::WalkBuilder` with standard ignore filters, which now honors `.gitignore`, `.git/info/exclude`, global gitignore, `.ignore`, and hidden files by default.
 - Replaced `dirs` with `directories-next` for locating system config directories.
 
 ## 1.7.2 - 2026-02-09

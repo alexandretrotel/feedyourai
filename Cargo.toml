@@ -1,6 +1,6 @@
 [package]
 name = "feedyourai"
-version = "1.7.2"
+version = "2.0.0"
 edition = "2024"
 description = "A tool to combine text files for AI processing with flexible filtering options."
 authors = ["atrtde"]
@@ -21,7 +21,6 @@ directories-next = "2.0.0"
 ignore = "0.4.25"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_yaml = "0.9.34"
-walkdir = "2.5.0"
 tempfile = "3.25.0"
 thiserror = "2.0.18"
 anyhow = "1.0.101"
