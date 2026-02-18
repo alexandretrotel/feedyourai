@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::clipboard::copy_to_clipboard;
+    use crate::utils::clipboard::copy_to_clipboard;
     use crate::error::{AppError, AppResult};
     use crate::tests::common::{create_file, setup_temp_dir};
     use std::io;

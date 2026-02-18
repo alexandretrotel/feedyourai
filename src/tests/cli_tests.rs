@@ -2,12 +2,14 @@
 mod tests {
     use std::path::PathBuf;
 
-    use crate::error::AppError;
-    use crate::{cli::create_commands, config::config_from_matches};
+    use clap::{CommandFactory, Parser};
+
+    use crate::cli::Cli;
+    use crate::config::config_from_matches;
 
     #[test]
     fn test_default_config() {
-        let args = create_commands().get_matches_from(vec!["fyai"]);
+        let args = Cli::command().get_matches_from(vec!["fyai"]);
         let (config, _explicit) = config_from_matches(args).unwrap();
 
         assert_eq!(config.directory, PathBuf::from("."));
@@ -22,7 +24,7 @@ mod tests {
 
     #[test]
     fn test_custom_directory_and_output() {
-        let args = create_commands().get_matches_from(vec![
+        let args = Cli::command().get_matches_from(vec![
             "fyai",
             "--dir",
             "/path/to/dir",
@@ -43,8 +45,7 @@ mod tests {
 
     #[test]
     fn test_extensions_parsing() {
-        let args =
-            create_commands().get_matches_from(vec!["fyai", "--include-ext", "txt, md, pdf"]);
+        let args = Cli::command().get_matches_from(vec!["fyai", "--include-ext", "txt, md, pdf"]);
         let (config, _explicit) = config_from_matches(args).unwrap();
 
         assert_eq!(
@@ -55,7 +56,7 @@ mod tests {
 
     #[test]
     fn test_exclude_dirs_parsing() {
-        let args = create_commands().get_matches_from(vec!["fyai", "--exclude-dirs", "src,tests"]);
+        let args = Cli::command().get_matches_from(vec!["fyai", "--exclude-dirs", "src,tests"]);
         let (config, _explicit) = config_from_matches(args).unwrap();
 
         assert_eq!(
@@ -67,7 +68,7 @@ mod tests {
     #[test]
     fn test_exclude_dirs_with_empty_and_spaces() {
         let args =
-            create_commands().get_matches_from(vec!["fyai", "--exclude-dirs", "src,, tests ,docs"]);
+            Cli::command().get_matches_from(vec!["fyai", "--exclude-dirs", "src,, tests ,docs"]);
         let (config, _explicit) = config_from_matches(args).unwrap();
 
         assert_eq!(
@@ -82,7 +83,7 @@ mod tests {
 
     #[test]
     fn test_size_filters() {
-        let args = create_commands().get_matches_from(vec![
+        let args = Cli::command().get_matches_from(vec![
             "fyai",
             "--min-size",
             "1000",
@@ -97,26 +98,19 @@ mod tests {
 
     #[test]
     fn test_invalid_min_size() {
-        let args = create_commands().get_matches_from(vec!["fyai", "--min-size", "invalid"]);
-        let result = config_from_matches(args);
-
+        let result = Cli::try_parse_from(vec!["fyai", "--min-size", "invalid"]);
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), AppError::InvalidMinSize));
     }
 
     #[test]
     fn test_invalid_max_size() {
-        let args = create_commands().get_matches_from(vec!["fyai", "--max-size", "invalid"]);
-        let result = config_from_matches(args);
-
+        let result = Cli::try_parse_from(vec!["fyai", "--max-size", "invalid"]);
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), AppError::InvalidMaxSize));
     }
 
     #[test]
     fn test_extensions_with_empty_and_spaces() {
-        let args =
-            create_commands().get_matches_from(vec!["fyai", "--include-ext", "txt,, md ,pdf"]);
+        let args = Cli::command().get_matches_from(vec!["fyai", "--include-ext", "txt,, md ,pdf"]);
         let (config, _explicit) = config_from_matches(args).unwrap();
 
         assert_eq!(
@@ -127,7 +121,7 @@ mod tests {
 
     #[test]
     fn test_tree_only_flag() {
-        let args = create_commands().get_matches_from(vec!["fyai", "--tree-only"]);
+        let args = Cli::command().get_matches_from(vec!["fyai", "--tree-only"]);
         let (config, _explicit) = config_from_matches(args).unwrap();
 
         assert!(config.tree_only);

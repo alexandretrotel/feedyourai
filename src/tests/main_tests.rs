@@ -5,8 +5,9 @@ use std::{
 };
 use tempfile::TempDir;
 
-use crate::cli::create_commands;
+use crate::cli::Cli;
 use crate::error::AppError;
+use clap::Parser;
 
 static SERIALIZE_TESTS: OnceLock<Mutex<()>> = OnceLock::new();
 
@@ -47,8 +48,8 @@ fn test_init_local_creates_file() {
     let _cwd_guard = CwdGuard::new();
     env::set_current_dir(temp.path()).expect("set cwd to temp");
 
-    let matches = create_commands().get_matches_from(vec!["fyai", "init"]);
-    let handled = crate::handle_init_subcommand(&matches)
+    let cli = Cli::parse_from(["fyai", "init"]);
+    let handled = crate::handle_init_subcommand(&cli)
         .expect("handle_init_subcommand should succeed for local init");
     assert!(handled, "Expected init subcommand to be handled");
 
@@ -74,8 +75,8 @@ fn test_init_already_exists_without_force_errors() {
     let file_path = temp.path().join("fyai.yaml");
     fs::write(&file_path, "existing").expect("create existing file");
 
-    let matches = create_commands().get_matches_from(vec!["fyai", "init"]);
-    let res = crate::handle_init_subcommand(&matches);
+    let cli = Cli::parse_from(["fyai", "init"]);
+    let res = crate::handle_init_subcommand(&cli);
     assert!(
         res.is_err(),
         "Expected error when config exists and --force not provided"
@@ -95,8 +96,8 @@ fn test_init_force_overwrites_existing() {
     let file_path = temp.path().join("fyai.yaml");
     fs::write(&file_path, "old content").expect("create existing file");
 
-    let matches = create_commands().get_matches_from(vec!["fyai", "init", "--force"]);
-    let handled = crate::handle_init_subcommand(&matches)
+    let cli = Cli::parse_from(["fyai", "init", "--force"]);
+    let handled = crate::handle_init_subcommand(&cli)
         .expect("handle_init_subcommand should succeed with --force");
     assert!(handled, "Expected init to be handled even with --force");
 
