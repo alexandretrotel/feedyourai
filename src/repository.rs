@@ -3,7 +3,7 @@ use std::{path::PathBuf, process::Command};
 use tempfile::TempDir;
 
 use crate::config::Config;
-use crate::error::{AppError, AppResult};
+use crate::errors::{AppError, AppResult};
 
 fn command_error_details(output: &std::process::Output) -> String {
     let stderr = String::from_utf8_lossy(&output.stderr);

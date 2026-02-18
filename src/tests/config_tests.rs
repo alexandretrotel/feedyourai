@@ -5,7 +5,7 @@ use std::sync::{Mutex, OnceLock};
 use clap::{Arg, ArgAction, Command};
 
 use crate::config::{Config, FileConfig, config_from_matches, discover_config_file, merge_config};
-use crate::error::AppError;
+use crate::errors::AppError;
 
 static TEST_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 

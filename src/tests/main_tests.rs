@@ -6,7 +6,7 @@ use std::{
 use tempfile::TempDir;
 
 use crate::cli::Cli;
-use crate::error::AppError;
+use crate::errors::AppError;
 use clap::Parser;
 
 static SERIALIZE_TESTS: OnceLock<Mutex<()>> = OnceLock::new();

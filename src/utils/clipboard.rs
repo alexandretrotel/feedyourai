@@ -3,7 +3,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 
-use crate::error::{AppError, AppResult};
+use crate::errors::{AppError, AppResult};
 
 pub fn copy_to_clipboard(output_path: &Path) -> AppResult<()> {
     let mut output_contents = String::new();

@@ -1,12 +1,16 @@
 use std::io;
 use std::path::PathBuf;
 
+use clap::Error as ClapError;
 use thiserror::Error;
 
 pub type AppResult<T> = Result<T, AppError>;
 
 #[derive(Debug, Error)]
 pub enum AppError {
+    #[error(transparent)]
+    Clap(#[from] ClapError),
+
     #[error(transparent)]
     Io(#[from] io::Error),
 
