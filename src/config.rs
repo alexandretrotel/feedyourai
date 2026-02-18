@@ -118,14 +118,14 @@ pub fn merge_config(file: FileConfig, cli: Config, explicit: ExplicitFlags) -> C
 }
 
 pub fn config_from_matches(matches: clap::ArgMatches) -> AppResult<(Config, ExplicitFlags)> {
-    let directory_set = matches.value_source("directory") == Some(ValueSource::CommandLine);
+    let directory_set = matches.value_source("input") == Some(ValueSource::CommandLine);
     let output_set = matches.value_source("output") == Some(ValueSource::CommandLine);
     let respect_gitignore_set =
         matches.value_source("respect_gitignore") == Some(ValueSource::CommandLine);
     let tree_only_set = matches.value_source("tree_only") == Some(ValueSource::CommandLine);
 
     let directory = matches
-        .try_get_one::<String>("directory")
+        .try_get_one::<String>("input")
         .map_err(|_| AppError::MissingDirectory)?
         .ok_or(AppError::MissingDirectory)?
         .into();

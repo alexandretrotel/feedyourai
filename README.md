@@ -85,7 +85,7 @@ fyai --help # show help
 - Combine only `.txt` and `.md` files from a specific directory:
 
   ```bash
-  fyai -d ./docs --include-ext txt,md
+  fyai -i ./docs --include-ext txt,md
   ```
 
 - Exclude all `.log` and `.tmp` files from the output:
