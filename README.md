@@ -152,10 +152,10 @@ fyai --help # show help
 The combined file includes headers for each source file:
 
 ```
-=== File: example.txt (12345 bytes) ===
+- File: example.txt (12345 bytes)
 [contents of example.txt]
 
-=== File: notes.md (67890 bytes) ===
+- File: notes.md (67890 bytes)
 [contents of notes.md]
 ```
 
