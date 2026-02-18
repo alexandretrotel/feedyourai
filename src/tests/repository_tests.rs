@@ -3,7 +3,7 @@ use std::{fs, path::PathBuf, process::Command};
 use tempfile::TempDir;
 
 use crate::{
-    repository::{clone_repository, run_on_repository},
+    git::{clone_repository, run_on_repository},
     tests::common::create_test_config,
 };
 
