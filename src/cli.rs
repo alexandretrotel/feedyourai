@@ -107,7 +107,11 @@ pub struct Cli {
     )]
     pub max_size: Option<u64>,
 
-    #[arg(long = "no-gitignore", action = ArgAction::SetTrue, help = "Sets whether to respect .gitignore rules (true/false) [default: true]")]
+    #[arg(
+        long = "no-gitignore",
+        action = ArgAction::SetTrue,
+        help = "Sets whether to respect ignore files (gitignore, .ignore, etc.) [default: true]"
+    )]
     pub no_gitignore: bool,
 
     #[arg(long = "tree-only", action = ArgAction::SetTrue, help = "Only output the project directory tree, no file contents")]
