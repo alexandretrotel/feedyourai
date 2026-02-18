@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.0.2 - 2026-02-18
+
+Changed
+- Split CLI-specific logic into a `cli` module folder.
+- Exposed a library API with `run_local` and `run_git`, keeping lower-level modules public.
+- Removed `clap` usage from the library crate.
+
+## 2.0.1 - 2026-02-17
+
+Fixed
+- Added a tree structure header to the output.
+- Use `--input` instead of `--directory` in CLI handling.
+
+Changed
+- README updates and corrections.
+
 ## 2.0.0 - 2026-02-18
 
 Changed

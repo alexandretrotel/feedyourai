@@ -4,8 +4,6 @@ use crate::errors::{AppError, AppResult};
 use crate::scanner::{get_directory_structure, process_files};
 use crate::utils::clipboard::{copy_to_clipboard, should_ignore_clipboard_error};
 
-pub mod init;
-
 pub fn run(config: Config) -> AppResult<()> {
     let dir_structure =
         get_directory_structure(&config.directory, IGNORED_FILES, IGNORED_DIRS, &config)?;

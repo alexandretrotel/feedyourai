@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use crate::cli::{Cli, Commands};
-use crate::errors::{AppError, AppResult};
+use super::{Cli, Commands};
+use feedyourai::errors::{AppError, AppResult};
 
 pub fn handle_init_subcommand(cli: &Cli) -> AppResult<bool> {
     if let Some(Commands::Init { global, force }) = &cli.command {
@@ -9,8 +9,8 @@ pub fn handle_init_subcommand(cli: &Cli) -> AppResult<bool> {
         let force = *force;
 
         let (path, display_path) = if global {
-            let cfg_dir =
-                crate::config::system_config_dir().expect("Could not determine config directory");
+            let cfg_dir = feedyourai::config::system_config_dir()
+                .expect("Could not determine config directory");
             std::fs::create_dir_all(&cfg_dir)?;
             let cfg_path = cfg_dir.join("fyai.yaml");
             (cfg_path.clone(), cfg_path.display().to_string())
