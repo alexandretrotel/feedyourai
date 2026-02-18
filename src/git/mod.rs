@@ -57,7 +57,7 @@ pub fn run(
     let mut config = config;
     config.directory = clone_path;
 
-    let result = crate::run_with_config(config);
+    let result = crate::commands::run(config);
     drop(temp_dir);
     result
 }
