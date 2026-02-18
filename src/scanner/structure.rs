@@ -14,9 +14,10 @@ pub fn get_directory_structure(
     config: &Config,
 ) -> io::Result<String> {
     let mut structure = String::new();
+    structure.push_str("- Tree Structure\n\n");
 
     if root.read_dir()?.count() == 0 {
-        structure.push_str("The directory is empty.\n");
+        structure.push_str("The directory is empty.\n\n");
         return Ok(structure);
     }
 
