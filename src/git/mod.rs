@@ -4,21 +4,9 @@ use tempfile::TempDir;
 
 use crate::config::Config;
 use crate::errors::{AppError, AppResult};
+use crate::git::utils::command_error_details;
 
-fn command_error_details(output: &std::process::Output) -> String {
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let details = if !stderr.trim().is_empty() {
-        stderr.trim()
-    } else {
-        stdout.trim()
-    };
-    if details.is_empty() {
-        "unknown error".to_string()
-    } else {
-        details.to_string()
-    }
-}
+mod utils;
 
 pub(crate) fn clone_repository(
     repo_url: &str,
@@ -58,7 +46,7 @@ pub(crate) fn clone_repository(
     Ok((temp_dir, clone_path))
 }
 
-pub fn run_on_repository(
+pub fn run(
     repo_url: &str,
     branch: Option<&str>,
     commit: Option<&str>,
@@ -70,8 +58,6 @@ pub fn run_on_repository(
     config.directory = clone_path;
 
     let result = crate::run_with_config(config);
-
     drop(temp_dir);
-
     result
 }
