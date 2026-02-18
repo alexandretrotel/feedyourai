@@ -1,127 +1,77 @@
-use clap::{Arg, Command};
+use clap::{ArgAction, Parser, Subcommand};
 
-pub fn create_commands() -> Command {
-    Command::new("fyai")
-        .version(env!("CARGO_PKG_VERSION"))
-        .about("A tool to combine text files for AI processing with flexible filtering options.\n\nCONFIG FILE SUPPORT:\n  - You can specify options in a config file (YAML format).\n  - Local config: ./fyai.yaml (used if present in current directory)\n  - Global config: ~/.config/fyai.yaml (used if no local config found)\n  - CLI options override config file values.\n  - See README for details and examples.")
-        .arg(
-            Arg::new("directory")
-                .short('d')
-                .long("dir")
-                .value_name("DIR")
-                .help("Sets the input directory")
-                .default_value("."),
-        )
-        .arg(
-            Arg::new("output")
-                .short('o')
-                .long("output")
-                .value_name("FILE")
-                .help("Sets the output file")
-                .default_value("fyai.txt"),
-        )
-        .arg(
-            Arg::new("repo")
-                .long("repo")
-                .value_name("URL")
-                .help("Clone a git repository (GitHub/GitLab) into a temporary directory before processing").conflicts_with("directory"),
-        )
-        .arg(
-            Arg::new("repo_branch")
-                .long("repo-branch")
-                .value_name("BRANCH")
-                .help("Branch or tag to checkout when using --repo")
-                .requires("repo"),
-        )
-        .arg(
-            Arg::new("repo_commit")
-                .long("repo-commit")
-                .value_name("COMMIT")
-                .help("Commit SHA to checkout when using --repo")
-                .requires("repo"),
-        )
-        .arg(
-            Arg::new("include_dirs")
-                .long("include-dirs")
-                .value_name("DIRS")
-                .help("Comma-separated list of directories to include (e.g., src,docs)"),
-        )
-        .arg(
-            Arg::new("exclude_dirs")
-                .long("exclude-dirs")
-                .value_name("DIRS")
-                .help("Comma-separated list of directories to exclude (e.g., node_modules,dist)"),
-        )
-        .arg(
-            Arg::new("include_ext")
-                .long("include-ext")
-                .value_name("EXT")
-                .help("Comma-separated list of file extensions to include (e.g., txt,md)"),
-        )
-        .arg(
-            Arg::new("exclude_ext")
-                .long("exclude-ext")
-                .value_name("EXT")
-                .help("Comma-separated list of file extensions to exclude (e.g., log,tmp)"),
-        )
-        .arg(
-            Arg::new("include_files")
-                .long("include-files")
-                .value_name("FILES")
-                .help("Comma-separated list of file names to include (e.g., README.md,main.rs)"),
-        )
-        .arg(
-            Arg::new("exclude_files")
-                .long("exclude-files")
-                .value_name("FILES")
-                .help("Comma-separated list of file names to exclude (e.g., LICENSE,config.json)"),
-        )
-        .arg(
-            Arg::new("respect_gitignore")
-                .long("respect-gitignore")
-                .value_name("BOOL")
-                .help("Whether to respect .gitignore rules (true/false) [default: true]"),
-        )
-        .arg(
-            Arg::new("min_size")
-                .short('n')
-                .long("min-size")
-                .value_name("BYTES")
-                .help("Exclude files smaller than this size in bytes"),
-        )
-        .arg(
-            Arg::new("max_size")
-                .short('m')
-                .long("max-size")
-                .value_name("BYTES")
-                .help("Exclude files larger than this size in bytes"),
-        )
-        .arg(
-            clap::Arg::new("tree_only")
-                .long("tree-only")
-                .action(clap::ArgAction::SetTrue)
-                .help("Only output the project directory tree, no file contents"),
-        )
-        .arg(
-            clap::Arg::new("test")
-                .short('t')
-                .long("test")
-                .action(clap::ArgAction::SetTrue)
-                .help("Run in test mode"),
-        ).subcommand(
-            Command::new("init")
-                .about("Generate a template fyai.yaml config file")
-                .arg(
-                    Arg::new("global")
-                        .long("global")
-                        .help("Generate config in ~/.config/fyai.yaml")
-                        .action(clap::ArgAction::SetTrue),
-                )
-                .arg(
-                    Arg::new("force")
-                        .long("force")
-                        .help("Overwrite existing config file if present")
-                        .action(clap::ArgAction::SetTrue),
-                ),
-        )
+#[derive(Parser, Debug)]
+#[command(
+    name = "fyai",
+    version = env!("CARGO_PKG_VERSION"),
+    about = "A tool to combine text files for AI processing with flexible filtering options.\n\nCONFIG FILE SUPPORT:\n  - You can specify options in a config file (YAML format).\n  - Local config: ./fyai.yaml (used if present in current directory)\n  - Global config: ~/.config/fyai.yaml (used if no local config found)\n  - CLI options override config file values.\n  - See README for details and examples."
+)]
+pub struct Cli {
+    #[arg(short = 'i', long = "input", value_name = "DIR", default_value = ".", help = "Sets the input directory")]
+    pub input: String,
+
+    #[arg(
+        short = 'o',
+        long = "output",
+        value_name = "FILE",
+        default_value = "fyai.txt",
+        help = "Sets the output file"
+    )]
+    pub output: String,
+
+    #[arg(long = "repo", value_name = "URL", conflicts_with = "directory", help = "Sets the git repository URL")]
+    pub repo: Option<String>,
+
+    #[arg(long = "repo-branch", value_name = "BRANCH", requires = "repo", help = "Sets the git repository branch or tag")]
+    pub repo_branch: Option<String>,
+
+    #[arg(long = "repo-commit", value_name = "COMMIT", requires = "repo", help = "Sets the git repository commit SHA")]
+    pub repo_commit: Option<String>,
+
+    #[arg(long = "include-dirs", value_name = "DIRS", help = "Sets the directories to include (e.g., src,tests)")]
+    pub include_dirs: Option<String>,
+
+    #[arg(long = "exclude-dirs", value_name = "DIRS", help = "Sets the directories to exclude (e.g., node_modules,target)")]
+    pub exclude_dirs: Option<String>,
+
+    #[arg(long = "include-ext", value_name = "EXT", help = "Sets the file extensions to include (e.g., .json,.toml)")]
+    pub include_ext: Option<String>,
+
+    #[arg(long = "exclude-ext", value_name = "EXT", help = "Sets the file extensions to exclude (e.g., .json,.toml)")]
+    pub exclude_ext: Option<String>,
+
+    #[arg(long = "include-files", value_name = "FILES", help = "Sets the file names to include (e.g., README.md,main.rs)")]
+    pub include_files: Option<String>,
+
+    #[arg(long = "exclude-files", value_name = "FILES", help = "Sets the file names to exclude (e.g., LICENSE,config.json)")]
+    pub exclude_files: Option<String>,
+
+    #[arg(short = 'n', long = "min-size", value_name = "BYTES", help = "Exclude files smaller than this size in bytes")]
+    pub min_size: Option<u64>,
+
+    #[arg(short = 'm', long = "max-size", value_name = "BYTES", help = "Exclude files larger than this size in bytes")]
+    pub max_size: Option<u64>,
+
+    #[arg(long = "no-gitignore", action = ArgAction::SetTrue, help = "Sets whether to respect .gitignore rules (true/false) [default: true]")]
+    pub no_gitignore: bool,
+
+    #[arg(long = "tree-only", action = ArgAction::SetTrue, help = "Only output the project directory tree, no file contents")]
+    pub tree_only: bool,
+
+    #[arg(short = 't', long = "test", action = ArgAction::SetTrue, help = "Run in test mode")]
+    pub test: bool,
+
+    #[command(subcommand)]
+    pub command: Option<Commands>,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum Commands {
+    Init {
+        #[arg(long = "global", action = ArgAction::SetTrue, help = "Generate config in ~/.config/fyai.yaml")]
+        global: bool,
+
+        #[arg(long = "force", action = ArgAction::SetTrue, help = "Overwrite existing config file if present")]
+        force: bool,
+    },
 }
