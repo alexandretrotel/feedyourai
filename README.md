@@ -169,7 +169,7 @@ Contributions are welcome! Please:
 
 ## License
 
-MIT. See [LICENSE](LICENSE) for more details.
+GPL-3.0 or later. See [LICENSE](LICENSE) for more details.
 
 ## Changelog
 
