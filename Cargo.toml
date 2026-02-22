@@ -8,7 +8,7 @@ homepage = "https://github.com/atrtde/feedyourai"
 repository = "https://github.com/atrtde/feedyourai"
 documentation = "https://github.com/atrtde/feedyourai"
 exclude = ["assets/*", ".github/*"]
-license = "MIT"
+license = "GPL-3.0-or-later"
 
 [[bin]]
 name = "fyai"
