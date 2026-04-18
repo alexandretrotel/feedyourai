@@ -3,10 +3,10 @@ name = "feedyourai"
 version = "2.0.2"
 edition = "2024"
 description = "A tool to combine text files for AI processing with flexible filtering options."
-authors = ["Alexandre Trotel"]
-homepage = "https://github.com/alexandretrotel/feedyourai"
-repository = "https://github.com/alexandretrotel/feedyourai"
-documentation = "https://github.com/alexandretrotel/feedyourai"
+authors = ["atrtde"]
+homepage = "https://github.com/atrtde/feedyourai"
+repository = "https://github.com/atrtde/feedyourai"
+documentation = "https://github.com/atrtde/feedyourai"
 exclude = ["assets/*", ".github/*"]
 license = "GPL-3.0-or-later"
 
