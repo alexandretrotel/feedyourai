@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.0.3 - 2026-05-13
+
+Changed
+- Removed unused `anyhow` dependency.
+
 ## 2.0.2 - 2026-02-18
 
 Changed
