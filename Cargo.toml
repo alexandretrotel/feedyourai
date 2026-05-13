@@ -23,4 +23,3 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_yaml = "0.9.34"
 tempfile = "3.25.0"
 thiserror = "2.0.18"
-anyhow = "1.0.101"
