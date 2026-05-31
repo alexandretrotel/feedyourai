@@ -29,7 +29,7 @@ cargo install feedyourai
 Or,
 
 ```bash
-cargo install --git https://github.com/atrtde/feedyourai.git
+cargo install --git https://github.com/alexandretrotel/feedyourai.git
 ```
 
 This installs the `fyai` binary to `~/.cargo/bin/`. Ensure this directory is in your `PATH`.
