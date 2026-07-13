@@ -1,6 +1,6 @@
 [package]
 name = "feedyourai"
-version = "2.0.4"
+version = "2.0.5"
 edition = "2024"
 description = "A tool to combine text files for AI processing with flexible filtering options."
 authors = ["atrtde"]
