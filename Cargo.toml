@@ -1,6 +1,6 @@
 [package]
 name = "feedyourai"
-version = "2.0.5"
+version = "2.1.0"
 edition = "2024"
 description = "A tool to combine text files for AI processing with flexible filtering options."
 authors = ["atrtde"]
@@ -17,9 +17,10 @@ path = "src/main.rs"
 [dependencies]
 clap = { version = "4.5.59", features = ["derive"] }
 arboard = "3.6.1"
+color-eyre = "0.6.5"
+eyre = "0.6.12"
 directories-next = "2.0.0"
 ignore = "0.4.25"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_yaml = "0.9.34"
 tempfile = "3.25.0"
-thiserror = "2.0.18"

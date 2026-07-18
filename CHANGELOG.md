@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.1.0 - 2026-07-18
+
+Changed
+- Switched error handling across the crate to `eyre` (with `color-eyre` reporting in the `fyai` binary), using native `eyre` macros (`eyre!`, `bail!`, `wrap_err`, `ok_or_eyre`).
+- `run_local` and `run_git` now return `eyre::Result<()>`.
+
+Removed
+- Removed the `thiserror` dependency and the `errors` module (`AppError` / `AppResult`).
+
 ## 2.0.3 - 2026-05-13
 
 Changed

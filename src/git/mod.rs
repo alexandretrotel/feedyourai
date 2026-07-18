@@ -1,9 +1,9 @@
 use std::{path::PathBuf, process::Command};
 
+use eyre::{Result, WrapErr, eyre};
 use tempfile::TempDir;
 
 use crate::config::Config;
-use crate::errors::{AppError, AppResult};
 use crate::git::utils::command_error_details;
 
 mod utils;
@@ -12,7 +12,7 @@ pub(crate) fn clone_repository(
     repo_url: &str,
     branch: Option<&str>,
     commit: Option<&str>,
-) -> AppResult<(TempDir, PathBuf)> {
+) -> Result<(TempDir, PathBuf)> {
     let temp_dir = tempfile::tempdir()?;
     let clone_path = temp_dir.path().join("repo");
 
@@ -26,9 +26,9 @@ pub(crate) fn clone_repository(
     }
     cmd.arg(repo_url).arg(&clone_path);
 
-    let output = cmd.output().map_err(AppError::GitCloneExec)?;
+    let output = cmd.output().wrap_err("failed to run git clone")?;
     if !output.status.success() {
-        return Err(AppError::GitCloneFailed(command_error_details(&output)));
+        return Err(eyre!("git clone failed: {}", command_error_details(&output)));
     }
 
     if let Some(commit) = commit {
@@ -37,9 +37,12 @@ pub(crate) fn clone_repository(
             .arg(&clone_path)
             .args(["checkout", commit])
             .output()
-            .map_err(AppError::GitCheckoutExec)?;
+            .wrap_err("failed to run git checkout")?;
         if !output.status.success() {
-            return Err(AppError::GitCheckoutFailed(command_error_details(&output)));
+            return Err(eyre!(
+                "git checkout failed: {}",
+                command_error_details(&output)
+            ));
         }
     }
 
@@ -51,7 +54,7 @@ pub fn run(
     branch: Option<&str>,
     commit: Option<&str>,
     config: Config,
-) -> AppResult<()> {
+) -> Result<()> {
     let (temp_dir, clone_path) = clone_repository(repo_url, branch, commit)?;
 
     let mut config = config;

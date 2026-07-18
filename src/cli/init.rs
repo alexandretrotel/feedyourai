@@ -1,16 +1,16 @@
 use std::path::PathBuf;
 
 use super::{Cli, Commands};
-use feedyourai::errors::{AppError, AppResult};
+use eyre::{OptionExt, Result, bail};
 
-pub fn handle_init_subcommand(cli: &Cli) -> AppResult<bool> {
+pub fn handle_init_subcommand(cli: &Cli) -> Result<bool> {
     if let Some(Commands::Init { global, force }) = &cli.command {
         let global = *global;
         let force = *force;
 
         let (path, display_path) = if global {
             let cfg_dir = feedyourai::config::system_config_dir()
-                .expect("Could not determine config directory");
+                .ok_or_eyre("could not determine config directory")?;
             std::fs::create_dir_all(&cfg_dir)?;
             let cfg_path = cfg_dir.join("fyai.yaml");
             (cfg_path.clone(), cfg_path.display().to_string())
@@ -20,7 +20,7 @@ pub fn handle_init_subcommand(cli: &Cli) -> AppResult<bool> {
         };
 
         if path.exists() && !force {
-            return Err(AppError::ConfigAlreadyExists { path: display_path });
+            bail!("config file already exists at {display_path}. Use --force to overwrite.");
         }
 
         let template = r#"# fyai.yaml - Configuration file for fyai

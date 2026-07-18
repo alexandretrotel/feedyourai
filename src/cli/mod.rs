@@ -1,7 +1,7 @@
 use clap::{ArgAction, Parser, Subcommand, parser::ValueSource};
 
+use eyre::{OptionExt, Result, eyre};
 use feedyourai::config::{Config, ExplicitFlags};
-use feedyourai::errors::{AppError, AppResult};
 pub mod init;
 
 #[derive(Parser, Debug)]
@@ -139,7 +139,7 @@ pub enum Commands {
     },
 }
 
-pub fn config_from_matches(matches: clap::ArgMatches) -> AppResult<(Config, ExplicitFlags)> {
+pub fn config_from_matches(matches: clap::ArgMatches) -> Result<(Config, ExplicitFlags)> {
     let directory_set = matches.value_source("input") == Some(ValueSource::CommandLine);
     let output_set = matches.value_source("output") == Some(ValueSource::CommandLine);
     let respect_gitignore_set =
@@ -148,14 +148,14 @@ pub fn config_from_matches(matches: clap::ArgMatches) -> AppResult<(Config, Expl
 
     let directory = matches
         .try_get_one::<String>("input")
-        .map_err(|_| AppError::MissingDirectory)?
-        .ok_or(AppError::MissingDirectory)?
+        .map_err(|_| eyre!("missing directory"))?
+        .ok_or_eyre("missing directory")?
         .into();
 
     let output = matches
         .try_get_one::<String>("output")
-        .map_err(|_| AppError::MissingOutput)?
-        .ok_or(AppError::MissingOutput)?
+        .map_err(|_| eyre!("missing output"))?
+        .ok_or_eyre("missing output")?
         .into();
 
     let include_dirs = match matches.try_get_one::<String>("include_dirs") {
@@ -223,7 +223,7 @@ pub fn config_from_matches(matches: clap::ArgMatches) -> AppResult<(Config, Expl
     let min_size = match matches.try_get_one::<u64>("min_size") {
         Ok(Some(value)) => Some(*value),
         Ok(None) | Err(_) => match matches.try_get_one::<String>("min_size") {
-            Ok(Some(s)) => Some(s.parse::<u64>().map_err(|_| AppError::InvalidMinSize)?),
+            Ok(Some(s)) => Some(s.parse::<u64>().map_err(|_| eyre!("invalid min-size"))?),
             Ok(None) | Err(_) => None,
         },
     };
@@ -231,7 +231,7 @@ pub fn config_from_matches(matches: clap::ArgMatches) -> AppResult<(Config, Expl
     let max_size = match matches.try_get_one::<u64>("max_size") {
         Ok(Some(value)) => Some(*value),
         Ok(None) | Err(_) => match matches.try_get_one::<String>("max_size") {
-            Ok(Some(s)) => Some(s.parse::<u64>().map_err(|_| AppError::InvalidMaxSize)?),
+            Ok(Some(s)) => Some(s.parse::<u64>().map_err(|_| eyre!("invalid max-size"))?),
             Ok(None) | Err(_) => None,
         },
     };

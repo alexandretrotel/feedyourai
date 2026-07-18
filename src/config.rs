@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::errors::{AppError, AppResult};
 use directories_next::BaseDirs;
+use eyre::{Result, WrapErr};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Config {
@@ -38,13 +38,12 @@ pub struct FileConfig {
 }
 
 impl FileConfig {
-    pub fn from_path<P: AsRef<Path>>(path: P) -> AppResult<Self> {
-        let content = fs::read_to_string(path.as_ref())?;
-        let config: FileConfig =
-            serde_yaml::from_str(&content).map_err(|e| AppError::YamlParse {
-                path: path.as_ref().to_path_buf(),
-                source: e,
-            })?;
+    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let path = path.as_ref();
+        let content = fs::read_to_string(path)
+            .wrap_err_with(|| format!("failed to read config file {}", path.display()))?;
+        let config: FileConfig = serde_yaml::from_str(&content)
+            .wrap_err_with(|| format!("YAML parse error in {}", path.display()))?;
         Ok(config)
     }
 }

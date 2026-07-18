@@ -1,14 +1,16 @@
 use clap::{CommandFactory, FromArgMatches};
+use eyre::{Result, WrapErr};
 
 use crate::cli::Cli;
-use feedyourai::errors::AppResult;
 use feedyourai::{config, run_git, run_local};
 
 mod cli;
 
-fn main() -> AppResult<()> {
+fn main() -> Result<()> {
+    color_eyre::install()?;
+
     let matches = Cli::command().get_matches();
-    let cli = Cli::from_arg_matches(&matches)?;
+    let cli = Cli::from_arg_matches(&matches).wrap_err("failed to parse arguments")?;
 
     if cli::init::handle_init_subcommand(&cli)? {
         return Ok(());
@@ -46,8 +48,9 @@ fn main() -> AppResult<()> {
             repo_branch.as_deref(),
             repo_commit.as_deref(),
             config,
-        );
+        )
+        .wrap_err("failed to process git repository");
     }
 
-    run_local(config)
+    run_local(config).wrap_err("failed to process local directory")
 }
