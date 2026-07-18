@@ -14,9 +14,8 @@ pub fn run(config: Config) -> Result<()> {
         println!("Project tree written to {}", config.output.display());
     } else {
         process_files(&config, &dir_structure, IGNORED_FILES, IGNORED_DIRS)?;
-        let output_contents = std::fs::read_to_string(&config.output).wrap_err_with(|| {
-            format!("failed to read output file {}", config.output.display())
-        })?;
+        let output_contents = std::fs::read_to_string(&config.output)
+            .wrap_err_with(|| format!("failed to read output file {}", config.output.display()))?;
         let mut copied = true;
         if let Err(err) = copy_to_clipboard(&output_contents) {
             if should_ignore_clipboard_error() {

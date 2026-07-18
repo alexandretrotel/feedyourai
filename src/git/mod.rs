@@ -28,7 +28,10 @@ pub(crate) fn clone_repository(
 
     let output = cmd.output().wrap_err("failed to run git clone")?;
     if !output.status.success() {
-        return Err(eyre!("git clone failed: {}", command_error_details(&output)));
+        return Err(eyre!(
+            "git clone failed: {}",
+            command_error_details(&output)
+        ));
     }
 
     if let Some(commit) = commit {
