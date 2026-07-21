@@ -3,7 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use directories_next::BaseDirs;
-use eyre::{Result, WrapErr};
+use color_eyre::eyre::{Result, WrapErr};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Config {

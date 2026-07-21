@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use super::{Cli, Commands};
-use eyre::{OptionExt, Result, bail};
+use color_eyre::eyre::{OptionExt, Result, bail};
 
 pub fn handle_init_subcommand(cli: &Cli) -> Result<bool> {
     if let Some(Commands::Init { global, force }) = &cli.command {

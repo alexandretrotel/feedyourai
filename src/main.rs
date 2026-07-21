@@ -1,5 +1,5 @@
 use clap::{CommandFactory, FromArgMatches};
-use eyre::{Result, WrapErr};
+use color_eyre::eyre::{Result, WrapErr};
 
 use crate::cli::Cli;
 use feedyourai::{config, run_git, run_local};

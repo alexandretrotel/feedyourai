@@ -1,6 +1,6 @@
 use arboard::Clipboard;
 
-use eyre::{Result, eyre};
+use color_eyre::eyre::{Result, eyre};
 
 pub fn copy_to_clipboard(contents: &str) -> Result<()> {
     let mut clipboard = Clipboard::new().map_err(|e| eyre!("clipboard error: {e}"))?;

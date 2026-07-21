@@ -1,4 +1,4 @@
-use eyre::{Result, WrapErr};
+use color_eyre::eyre::{Result, WrapErr};
 
 use crate::config::Config;
 use crate::constants::{IGNORED_DIRS, IGNORED_FILES};

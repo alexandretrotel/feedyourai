@@ -365,7 +365,6 @@ dependencies = [
  "clap",
  "color-eyre",
  "directories-next",
- "eyre",
  "ignore",
  "serde",
  "serde_yaml",

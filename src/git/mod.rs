@@ -1,6 +1,6 @@
 use std::{path::PathBuf, process::Command};
 
-use eyre::{Result, WrapErr, eyre};
+use color_eyre::eyre::{Result, WrapErr, eyre};
 use tempfile::TempDir;
 
 use crate::config::Config;

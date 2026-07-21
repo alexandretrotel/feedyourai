@@ -6,7 +6,7 @@ pub mod scanner;
 pub mod utils;
 
 use config::Config;
-use eyre::Result;
+use color_eyre::eyre::Result;
 
 pub fn run_local(config: Config) -> Result<()> {
     commands::run(config)

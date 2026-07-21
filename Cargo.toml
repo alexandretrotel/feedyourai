@@ -18,7 +18,6 @@ path = "src/main.rs"
 clap = { version = "4.5.59", features = ["derive"] }
 arboard = "3.6.1"
 color-eyre = "0.6.5"
-eyre = "0.6.12"
 directories-next = "2.0.0"
 ignore = "0.4.25"
 serde = { version = "1.0.228", features = ["derive"] }

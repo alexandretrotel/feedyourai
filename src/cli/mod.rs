@@ -1,6 +1,6 @@
 use clap::{ArgAction, Parser, Subcommand, parser::ValueSource};
 
-use eyre::{OptionExt, Result, eyre};
+use color_eyre::eyre::{OptionExt, Result, eyre};
 use feedyourai::config::{Config, ExplicitFlags};
 pub mod init;
 
