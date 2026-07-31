@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.1.3 - 2026-07-31
+
+Changed
+- The published crate now uses an explicit `include` allowlist instead of an `exclude` denylist, so only `src/`, `Cargo.toml`, `README.md`, `LICENSE`, and `CHANGELOG.md` are shipped. `.gitignore` and any future non-source files no longer end up in the package.
+
 ## 2.1.0 - 2026-07-18
 
 Changed
