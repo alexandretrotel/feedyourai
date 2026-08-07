@@ -35,11 +35,9 @@ cargo install --git https://github.com/alexandretrotel/feedyourai.git
 
 This installs the `feedyourai` binary (and its `fyai` alias) to `~/.cargo/bin/`. Ensure this directory is in your `PATH`.
 
-## Usage
+## Configuration
 
-Run `fyai` in your terminal to combine files:
-
-### Config File Support
+### Config File
 
 You can specify options in a config file (TOML format):
 
@@ -72,6 +70,8 @@ All CLI options can be set in the config file. CLI flags always take precedence.
 ### Path Exclusion via `.fyaiignore`
 
 Drop a `.fyaiignore` file (gitignore syntax) anywhere under the scanned directory to exclude matching paths, as an alternative or complement to `exclude_dirs`/`exclude_files`. Unlike `.gitignore`, it's always respected — `--no-gitignore`/`respect_gitignore: false` has no effect on it, since it's fyai's own dedicated exclude mechanism rather than a git one.
+
+## Usage
 
 ### Basic Usage
 
