@@ -14,7 +14,7 @@ A command-line tool to combine files from a directory into a single file for LLM
   - File extensions (e.g., `.txt`, `.md`)
   - Directory inclusion/exclusion
   - File inclusion/exclusion
-  - Optionally respects `.gitignore`/`.ignore` rules (can be disabled with `--no-gitignore`)
+  - Optionally respects `.gitignore`/`.ignore` rules and skips hidden files/directories (dot-files); `--no-gitignore` disables both, walking hidden entries too
   - Always respects a `.fyaiignore` file (gitignore syntax), regardless of `--no-gitignore`
 - Preserves file boundaries with headers showing filename and size
 - Customizable input directory and output file
@@ -91,7 +91,7 @@ fyai --help     # show all options
 | Size window: 10KB–500KB, custom output   | `fyai -n 10240 -m 512000 -o ai_input.txt -x dist,node_modules`         |
 | Tree only, no file contents              | `fyai --tree-only -o tree.txt`                                        |
 | Tree with `tree`-style connector glyphs  | `fyai --tree-only --human -o tree.txt`                                |
-| Ignore `.gitignore` (include everything) | `fyai --respect-gitignore false`                                      |
+| Ignore `.gitignore` and hidden-file rules (include everything) | `fyai --respect-gitignore false`                        |
 | Remote repo, specific branch             | `fyai --repo https://github.com/owner/repo.git --repo-branch main`    |
 | Remote repo, specific commit             | `fyai --repo https://github.com/owner/repo.git --repo-commit 1234abcd` |
 | Generate a config template               | `fyai init`                                                            |
