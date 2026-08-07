@@ -1,3 +1,6 @@
+//! Writes the directory tree plus the contents of every file that passes
+//! the configured filters into the output file.
+
 use std::fs::{self, File};
 use std::io::{self, Read, Write};
 
@@ -7,19 +10,23 @@ use super::filter::PathFilter;
 use super::utils::size_allowed;
 use super::walker::build_walker;
 
+/// Writes `dir_structure` followed by the contents of every matching file
+/// under `config.directory` to `config.output`.
+///
+/// Files that fail UTF-8 decoding are silently skipped (binary files aren't
+/// meaningful to include in an AI-facing text dump); everything else is
+/// filtered by the path filter and size bounds before being appended, each
+/// prefixed with a `- File: name (size bytes)` header.
 pub fn process_files(
     config: &Config,
     dir_structure: &str,
-    ignored_files: &[&str],
     ignored_dirs: &[&str],
 ) -> io::Result<()> {
     let mut output = File::create(&config.output)?;
     write!(output, "{}", dir_structure)?;
 
-    println!("Processing files in: {:?}", config.directory);
-
     let filter = PathFilter::new(config, ignored_dirs);
-    let walker = build_walker(&config.directory, ignored_files, ignored_dirs, config)?;
+    let walker = build_walker(&config.directory, ignored_dirs, config)?;
     for entry in walker {
         let entry = entry.map_err(io::Error::other)?;
         let path = entry.path();
@@ -41,8 +48,6 @@ pub fn process_files(
         if !size_allowed(file_size, config.min_size, config.max_size) {
             continue;
         }
-
-        println!("Processing: {} ({} bytes)", path.display(), file_size);
 
         let mut file = File::open(path)?;
         let mut contents = Vec::new();
