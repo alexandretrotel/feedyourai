@@ -22,7 +22,7 @@ pub(crate) fn run() -> Result<()> {
 
 /// Parses `args`, resolves configuration (merging any `fyai.toml` with CLI
 /// flags), runs the combine, and reports the result to stdout/stderr,
-/// including a best-effort clipboard copy.
+/// including a best-effort clipboard copy when `--clipboard` was passed.
 ///
 /// Split out from [`run`] so it can be exercised directly, with an explicit
 /// argument list, from tests — `run` itself can't be called more than once
@@ -67,20 +67,21 @@ where
     let output_path = config.output.clone();
     let tree_only = config.tree_only;
 
-    if let Some(repo_url) = repo_url {
+    let total_size = if let Some(repo_url) = repo_url {
         run_git(
             &repo_url,
             repo_branch.as_deref(),
             repo_commit.as_deref(),
             config,
         )
-        .wrap_err("failed to process git repository")?;
+        .wrap_err("failed to process git repository")?
     } else {
-        run_local(config).wrap_err("failed to process local directory")?;
-    }
+        run_local(config).wrap_err("failed to process local directory")?
+    };
 
     if tree_only {
         println!("Project tree written to {}", output_path.display());
+        println!("Total size walked: {}", format_size(total_size));
         return Ok(());
     }
 
@@ -88,16 +89,42 @@ where
         .wrap_err_with(|| format!("failed to read output file {}", output_path.display()))?;
 
     println!("Files combined successfully into {}", output_path.display());
+    println!("Total size walked: {}", format_size(total_size));
 
-    match clipboard::copy_to_clipboard(&output_contents) {
-        Ok(()) => println!("Output copied to clipboard successfully!"),
-        Err(err) if clipboard::should_ignore_clipboard_error() => {
-            eprintln!("Warning: clipboard unavailable; skipping copy. {}", err);
+    if cli.clipboard {
+        match clipboard::copy_to_clipboard(&output_contents) {
+            Ok(()) => println!("Output copied to clipboard successfully!"),
+            Err(err) if clipboard::should_ignore_clipboard_error() => {
+                eprintln!("Warning: clipboard unavailable; skipping copy. {}", err);
+            }
+            Err(err) => return Err(err),
         }
-        Err(err) => return Err(err),
     }
 
     Ok(())
+}
+
+/// Formats `bytes` as a human-readable size (`"512 B"`, `"1.2 KB"`, `"3.4
+/// MB"`, ...), using 1024 as the unit step.
+///
+/// Mirrors the library's own (crate-private) `scanner::process::format_size`
+/// used for per-file headings; kept separate since the library exposes no
+/// public formatting API for binaries to share.
+fn format_size(bytes: u64) -> String {
+    const UNITS: [&str; 4] = ["B", "KB", "MB", "GB"];
+
+    let mut size = bytes as f64;
+    let mut unit = 0;
+    while size >= 1024.0 && unit < UNITS.len() - 1 {
+        size /= 1024.0;
+        unit += 1;
+    }
+
+    if unit == 0 {
+        format!("{bytes} B")
+    } else {
+        format!("{size:.1} {}", UNITS[unit])
+    }
 }
 
 #[cfg(test)]
@@ -179,7 +206,33 @@ mod tests {
 
     #[test]
     #[serial(env)]
-    fn execute_combines_local_directory_and_copies_to_clipboard() {
+    fn execute_combines_local_directory_without_touching_clipboard_by_default() {
+        let scan_dir = tempfile::tempdir().unwrap();
+        std::fs::write(scan_dir.path().join("a.txt"), "hello").unwrap();
+        let cwd_dir = tempfile::tempdir().unwrap();
+        let output = cwd_dir.path().join("out.txt");
+        let _cwd = CwdGuard::enter(cwd_dir.path());
+
+        // No CiEnvGuard here: the clipboard step is only reached with
+        // `--clipboard`, so this must succeed regardless of CI/clipboard
+        // availability.
+        let result = execute([
+            "fyai".into(),
+            "-i".into(),
+            scan_dir.path().as_os_str().to_owned(),
+            "-o".into(),
+            output.as_os_str().to_owned(),
+        ]);
+
+        assert!(result.is_ok(), "{result:?}");
+        let contents = std::fs::read_to_string(&output).unwrap();
+        assert!(contents.contains("a.txt"));
+        assert!(contents.contains("hello"));
+    }
+
+    #[test]
+    #[serial(env)]
+    fn execute_combines_local_directory_and_copies_to_clipboard_when_flag_passed() {
         let scan_dir = tempfile::tempdir().unwrap();
         std::fs::write(scan_dir.path().join("a.txt"), "hello").unwrap();
         let cwd_dir = tempfile::tempdir().unwrap();
@@ -193,6 +246,7 @@ mod tests {
             scan_dir.path().as_os_str().to_owned(),
             "-o".into(),
             output.as_os_str().to_owned(),
+            "--clipboard".into(),
         ]);
 
         assert!(result.is_ok(), "{result:?}");
@@ -297,5 +351,20 @@ mod tests {
         .unwrap_err();
 
         assert!(err.to_string().contains("failed to process git repository"));
+    }
+
+    // ---- format_size ----
+
+    #[test]
+    fn format_size_stays_bytes_under_1024() {
+        assert_eq!(format_size(0), "0 B");
+        assert_eq!(format_size(1023), "1023 B");
+    }
+
+    #[test]
+    fn format_size_kb_mb_gb() {
+        assert_eq!(format_size(1024), "1.0 KB");
+        assert_eq!(format_size(1024 * 1024), "1.0 MB");
+        assert_eq!(format_size(1024 * 1024 * 1024), "1.0 GB");
     }
 }

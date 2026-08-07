@@ -185,6 +185,15 @@ pub struct Cli {
     #[arg(long = "human", action = ArgAction::SetTrue, help = "Render the directory tree with tree-style connector glyphs")]
     pub human: bool,
 
+    /// Copies the combined output to the system clipboard \[default: false\].
+    #[arg(
+        short = 'c',
+        long = "clipboard",
+        action = ArgAction::SetTrue,
+        help = "Copy the combined output to the system clipboard [default: false]"
+    )]
+    pub clipboard: bool,
+
     /// Runs in test mode.
     #[arg(short = 't', long = "test", action = ArgAction::SetTrue, help = "Run in test mode")]
     pub test: bool,

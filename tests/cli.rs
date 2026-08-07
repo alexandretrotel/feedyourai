@@ -30,12 +30,13 @@ fn combines_files_and_writes_output() {
         .arg(dir.path())
         .arg("-o")
         .arg(&output)
-        // Headless sandboxes have no real clipboard; force the
-        // ignore-clipboard-error path so this test is deterministic.
-        .env("CI", "1")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Files combined successfully into"));
+        .stdout(predicate::str::contains("Files combined successfully into"))
+        .stdout(predicate::str::contains("Total size walked:"))
+        // No `--clipboard` flag passed: the clipboard must not be touched,
+        // so no clipboard-related message should appear.
+        .stdout(predicate::str::contains("clipboard").not());
 
     let contents = fs::read_to_string(&output).unwrap();
     assert!(contents.contains("a.rs"));
@@ -171,6 +172,7 @@ fn clipboard_warning_or_success_reported_in_ci() {
         .arg(dir.path())
         .arg("-o")
         .arg(&output)
+        .arg("--clipboard")
         .env("CI", "1")
         .assert()
         .success();

@@ -14,15 +14,22 @@ use super::tree::render_tree;
 
 /// Writes `config.directory`'s (filtered) tree, and optionally its files'
 /// contents, to `config.output`.
-pub fn scan(config: &Config) -> io::Result<()> {
+///
+/// Returns the total size in bytes of every file entry the walk collected
+/// (regardless of `config.tree_only` or the `min_size`/`max_size` content
+/// filters, which only gate whether a file's *contents* are written).
+pub fn scan(config: &Config) -> io::Result<u64> {
     let mut output = BufWriter::new(File::create(&config.output)?);
 
     if config.directory.read_dir()?.count() == 0 {
         write!(output, "- Tree Structure\n\nThe directory is empty.\n\n")?;
-        return output.flush();
+        output.flush()?;
+        return Ok(0);
     }
 
     let entries = collect_entries(config)?;
+    let total_size: u64 = entries.iter().filter_map(|entry| entry.size).sum();
+
     write!(
         output,
         "{}",
@@ -33,7 +40,8 @@ pub fn scan(config: &Config) -> io::Result<()> {
         write_file_contents(&entries, config, &mut output)?;
     }
 
-    output.flush()
+    output.flush()?;
+    Ok(total_size)
 }
 
 #[cfg(test)]
@@ -103,6 +111,53 @@ mod tests {
         assert!(contents.contains("nested.rs"));
         assert!(contents.contains("Hello World"));
         assert!(contents.contains("fn main() {}"));
+    }
+
+    #[test]
+    fn scan_returns_zero_total_size_for_an_empty_directory() {
+        let scan_dir = tempfile::tempdir().expect("tempdir");
+        let output_dir = tempfile::tempdir().expect("tempdir");
+        let output_path = output_dir.path().join("fyai.txt");
+
+        let config = base_config(scan_dir.path(), output_path);
+        let total_size = scan(&config).expect("scan should succeed");
+
+        assert_eq!(total_size, 0);
+    }
+
+    #[test]
+    fn scan_returns_total_size_of_walked_files() {
+        let scan_dir = tempfile::tempdir().expect("tempdir");
+        let output_dir = tempfile::tempdir().expect("tempdir");
+        let output_path = output_dir.path().join("fyai.txt");
+
+        fs::write(scan_dir.path().join("hello.txt"), "Hello World").expect("write"); // 11 bytes
+        fs::create_dir_all(scan_dir.path().join("sub")).expect("create_dir_all");
+        fs::write(
+            scan_dir.path().join("sub").join("nested.rs"),
+            "fn main() {}",
+        )
+        .expect("write"); // 12 bytes
+
+        let config = base_config(scan_dir.path(), output_path);
+        let total_size = scan(&config).expect("scan should succeed");
+
+        assert_eq!(total_size, 23);
+    }
+
+    #[test]
+    fn scan_total_size_is_unaffected_by_tree_only() {
+        let scan_dir = tempfile::tempdir().expect("tempdir");
+        let output_dir = tempfile::tempdir().expect("tempdir");
+        let output_path = output_dir.path().join("fyai.txt");
+
+        fs::write(scan_dir.path().join("hello.txt"), "Hello World").expect("write"); // 11 bytes
+
+        let mut config = base_config(scan_dir.path(), output_path);
+        config.tree_only = true;
+        let total_size = scan(&config).expect("scan should succeed");
+
+        assert_eq!(total_size, 11);
     }
 
     #[test]

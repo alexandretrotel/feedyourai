@@ -15,10 +15,11 @@ use crate::scanner::scan;
 /// Combines files from a local directory as described by `config`.
 ///
 /// Writes the result to `config.output` (either the directory tree only, or
-/// the tree plus file contents, depending on `config.tree_only`).
-pub fn run_local(config: Config) -> Result<()> {
-    scan(&config)?;
-    Ok(())
+/// the tree plus file contents, depending on `config.tree_only`), and
+/// returns the total size in bytes of every file the walk collected.
+pub fn run_local(config: Config) -> Result<u64> {
+    let total_size = scan(&config)?;
+    Ok(total_size)
 }
 
 /// Clones `repo_url` into a temporary directory, then runs the same combine
@@ -40,7 +41,7 @@ pub fn run_git(
     branch: Option<&str>,
     commit: Option<&str>,
     config: Config,
-) -> Result<()> {
+) -> Result<u64> {
     let (temp_dir, clone_path) = clone_repository(repo_url, branch, commit)?;
 
     let mut config = config;
@@ -221,6 +222,7 @@ mod tests {
 
         let result = run_local(config);
         assert!(result.is_ok(), "expected Ok, got {result:?}");
+        assert_eq!(result.unwrap(), 24); // "content of a" + "content of b", 12 bytes each
 
         let contents = read_output(&output_path);
         assert!(!contents.is_empty());

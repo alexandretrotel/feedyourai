@@ -75,7 +75,7 @@ fn size_allowed(size: u64, min: Option<u64>, max: Option<u64>) -> bool {
 
 /// Formats `bytes` as a human-readable size (`"512 B"`, `"1.2 KB"`, `"3.4
 /// MB"`, ...), using 1024 as the unit step.
-fn format_size(bytes: u64) -> String {
+pub(crate) fn format_size(bytes: u64) -> String {
     const UNITS: [&str; 4] = ["B", "KB", "MB", "GB"];
 
     let mut size = bytes as f64;

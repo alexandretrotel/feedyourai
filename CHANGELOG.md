@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-08-07 - 3.1.0
+
+Added
+- `scan`/`run_local`/`run_git` now return the total size in bytes of every file the walk collected, printed by the `fyai`/`feedyourai` binaries as `Total size walked: <human size>` once a run finishes (both the tree-only and full-combine paths).
+- `-c`/`--clipboard` flag to explicitly opt into copying the combined output to the system clipboard.
+
+Changed
+- **Breaking:** The combined output is no longer copied to the clipboard by default; pass `-c`/`--clipboard` to opt in.
+- `run_local`/`run_git` now return `Result<u64>` (the total walked size) instead of `Result<()>`.
+
 ## 2026-08-07 - 3.0.0
 
 Added
