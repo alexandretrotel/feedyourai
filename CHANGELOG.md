@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased - 3.0.0
+## 2026-08-07 - 3.0.0
 
 Added
 - `fyai` as a second binary target, aliasing `feedyourai` (same CLI, no behavior difference).
@@ -26,6 +26,13 @@ Changed
 - Wording: replaced "AI" with "LLM" throughout descriptions and doc comments (binary names `feedyourai`/`fyai` unchanged).
 - `fyai`/`feedyourai`'s CLI module moved from `cli.rs` + `cli/init.rs` to `commands/mod.rs` + `commands/init.rs` (the directory-only module layout).
 - Library restructuring: `src/commands.rs` renamed to `src/runner.rs` (its `run` function renamed `run_local`); `src/git.rs` merged into it (`run` renamed `run_git`), so both entry points live in one module instead of two files that each exported a function ambiguously named `run`. `lib.rs` now just re-exports `runner::{run_local, run_git}` instead of wrapping them.
+
+Performance
+- The directory is now walked exactly once, in parallel (`ignore::WalkParallel`), instead of twice sequentially (once for the tree, once for file contents) — `get_directory_tree`/`process_files` were merged into a single `scanner::scan`.
+- The run's own output file is no longer detected by `canonicalize`-ing every walked path (a full symlink-resolving `stat` chain per entry); a cheap file-name comparison now gates a `same-file`-based identity check, so almost every entry costs zero extra syscalls.
+- File reads and UTF-8 validation now run in parallel across files (`rayon`), with SIMD-accelerated validation (`simdutf8`) instead of `std`'s scalar `from_utf8`.
+- Output is written through a single buffered writer instead of many small unbuffered writes.
+- New dependencies: `rayon`, `same-file`, `simdutf8`.
 
 Fixed
 - `--repo`'s `conflicts_with` referenced a nonexistent `directory` arg id (the actual id is `input`), which made every CLI invocation panic at startup.
