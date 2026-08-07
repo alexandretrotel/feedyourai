@@ -325,10 +325,7 @@ mod tests {
         let config = base_config(dir.path().to_path_buf());
 
         let result = read_file_block(&entry, &config);
-        assert_eq!(
-            result,
-            Some((file_path, 11, "hello world".to_string()))
-        );
+        assert_eq!(result, Some((file_path, 11, "hello world".to_string())));
     }
 
     #[test]

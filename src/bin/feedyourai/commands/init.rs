@@ -233,8 +233,7 @@ mod tests {
         let result = handle_init_subcommand(&cli).expect("should succeed");
         assert!(result);
 
-        let contents =
-            std::fs::read_to_string(cfg_dir.join("fyai.toml")).expect("read");
+        let contents = std::fs::read_to_string(cfg_dir.join("fyai.toml")).expect("read");
         assert!(contents.contains("directory = \".\""));
         assert!(!contents.contains("existing = true"));
     }

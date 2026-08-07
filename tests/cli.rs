@@ -150,7 +150,9 @@ fn invalid_config_file_warns_and_falls_back_to_defaults() {
         .env("CI", "1")
         .assert()
         .success()
-        .stderr(predicate::str::contains("Warning: Failed to load config file"));
+        .stderr(predicate::str::contains(
+            "Warning: Failed to load config file",
+        ));
 
     assert!(dir.path().join("out.txt").exists());
 }
@@ -242,9 +244,7 @@ fn repo_flag_with_bogus_url_fails() {
         .arg(&output)
         .assert()
         .failure()
-        .stderr(predicate::str::contains(
-            "failed to process git repository",
-        ));
+        .stderr(predicate::str::contains("failed to process git repository"));
 }
 
 #[test]

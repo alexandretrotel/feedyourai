@@ -677,7 +677,13 @@ mod tests {
 
     #[test]
     fn repo_conflicts_with_input() {
-        let result = parse(&["fyai", "--repo", "https://example.com/x.git", "--input", "y"]);
+        let result = parse(&[
+            "fyai",
+            "--repo",
+            "https://example.com/x.git",
+            "--input",
+            "y",
+        ]);
         assert!(result.is_err());
     }
 
@@ -799,7 +805,10 @@ mod tests {
     #[test]
     fn explicit_string_returns_value_when_passed() {
         let matches = parse_ok(&["fyai", "--input", "somedir"]);
-        assert_eq!(explicit_string(&matches, "input"), Some("somedir".to_string()));
+        assert_eq!(
+            explicit_string(&matches, "input"),
+            Some("somedir".to_string())
+        );
     }
 
     #[test]

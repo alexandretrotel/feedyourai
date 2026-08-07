@@ -275,7 +275,10 @@ mod tests {
         ])
         .unwrap_err();
 
-        assert!(err.to_string().contains("failed to process local directory"));
+        assert!(
+            err.to_string()
+                .contains("failed to process local directory")
+        );
     }
 
     #[test]

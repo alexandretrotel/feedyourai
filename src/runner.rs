@@ -379,12 +379,7 @@ mod tests {
         let placeholder_dir = tempfile::tempdir().expect("tempdir");
         let config = test_config(placeholder_dir.path().to_path_buf(), output_path);
 
-        let result = run_git(
-            "/nonexistent/path/that/does/not/exist",
-            None,
-            None,
-            config,
-        );
+        let result = run_git("/nonexistent/path/that/does/not/exist", None, None, config);
 
         match result {
             Err(FyaiError::Git(msg)) => {
