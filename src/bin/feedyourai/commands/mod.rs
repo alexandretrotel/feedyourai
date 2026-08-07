@@ -1,6 +1,6 @@
 //! Argument parsing: the [`Cli`] struct, its `init` subcommand, and
 //! conversion of parsed `clap` matches into a library
-//! [`Config`](feedyourai::config::Config).
+//! [`FileConfig`](feedyourai::config::FileConfig).
 
 use clap::{ArgAction, Parser, Subcommand, parser::ValueSource};
 

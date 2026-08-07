@@ -9,7 +9,6 @@ Added
 - `error` module with a `FyaiError` type (via `thiserror`), replacing `color-eyre` in the library crate.
 - `--human` flag (and `human` config-file key) to render the directory tree with `tree`-style connector glyphs (`├──`, `└──`, `│`) instead of the default minimal two-space indent.
 - `system_config_dir` now honors `$XDG_CONFIG_HOME` (when set to an absolute path) on every platform, not just Linux, before falling back to the platform default.
-- `IGNORED_DIRS`'s rustdoc now embeds the full contents of `default_ignore_dirs.txt` in a fenced code block, so the list is visible directly on docs.rs.
 
 Changed
 - **Breaking:** CLI wiring (`cli`, `init`, clipboard) moved out of the library into the `fyai`/`feedyourai` binaries; the library no longer prints to stdout/stderr or copies to the clipboard, and no longer depends on `color-eyre`.
@@ -19,8 +18,7 @@ Changed
 - README demo GIF now uses a raw GitHub link so it renders on crates.io.
 - CI split into `ci.yml` (fmt, clippy, machete, test), `build-binaries.yml`, and `release.yml`, each triggered on `push` to `main` in addition to pull requests.
 - `release.yml` now uploads both `fyai` and `feedyourai` binaries per target.
-- `IGNORED_DIRS` trimmed to committed config/VCS directories only (`.github`, `.vscode`, `.git`, etc.); build/dependency/cache directories (`node_modules`, `target`, `.venv`, ...) are no longer hardcoded and now rely on `.gitignore` via `respect_gitignore`.
-- `IGNORED_DIRS` now parsed from a bundled `src/default_ignore_dirs.txt` ignore-list instead of a Rust array, seeded from github/gitignore's `Global/` editor/IDE templates plus VCS internals and common CI tooling.
+- `IGNORED_DIRS` trimmed to committed config/VCS directories only (`.github`, `.vscode`, `.git`, etc., grouped and doc-commented with a note to re-sync against github/gitignore's `Global/` templates); build/dependency/cache directories (`node_modules`, `target`, `.venv`, ...) are no longer hardcoded and now rely on `.gitignore` via `respect_gitignore`.
 - `get_directory_structure` now dispatches between two renderers based on `config.human`: a minimal two-space indent by default, or `tree`-style ASCII connectors when set.
 - **Breaking:** Per-file output format changed from `- File: name (size bytes)` + raw content to a `### relative/path (human size)` heading followed by a language-tagged, fenced code block (language inferred from extension via the new `scanner::lang` module). The fence widens from ```` ``` ```` to ```` ```` ```` when the file's own content contains a triple backtick, so the block's end is never ambiguous — the old format had no closing delimiter at all.
 - **Breaking:** `merge_config` now takes two `FileConfig`s (`file`, `cli`) instead of a `FileConfig` plus a fully-resolved `Config` and a separate `ExplicitFlags`. CLI parsing (`config_from_matches`) now returns a `FileConfig` directly, leaving a field `None` unless it was explicitly passed, instead of always resolving to a concrete value and tracking "was this explicit" on the side.

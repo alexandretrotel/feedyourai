@@ -1,22 +1,39 @@
 //! Default directory names that are always skipped during a scan, on top of
 //! anything the user configures via `include`/`exclude` options.
 
-use std::sync::LazyLock;
-
-/// Raw contents of the bundled default-ignore list. See
-/// `default_ignore_dirs.txt` for what's in it and why.
-const RAW_IGNORED_DIRS: &str = include_str!("default_ignore_dirs.txt");
-
 /// VCS and editor/tool config directories skipped regardless of
-/// `.gitignore` state, parsed from `RAW_IGNORED_DIRS` (`#`-comments and
-/// blank lines dropped).
+/// `.gitignore` state.
 ///
-/// Full bundled list, `default_ignore_dirs.txt`:
-#[doc = concat!("```text\n", include_str!("default_ignore_dirs.txt"), "```")]
-pub static IGNORED_DIRS: LazyLock<Vec<&'static str>> = LazyLock::new(|| {
-    RAW_IGNORED_DIRS
-        .lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty() && !line.starts_with('#'))
-        .collect()
-});
+/// Build/dependency/cache output (`node_modules`, `target`, `dist`,
+/// `.venv`, ...) is deliberately *not* listed here: those are almost
+/// universally covered by a project's own `.gitignore`, which
+/// `respect_gitignore` already honors. What's listed below is routinely
+/// *committed* to version control (CI configs, IDE settings, VCS
+/// internals), so `.gitignore` never catches it.
+///
+/// Editor/IDE entries mirror github/gitignore's `Global/` templates
+/// (`VisualStudioCode.gitignore`, `JetBrains.gitignore`,
+/// `Eclipse.gitignore`). Re-sync against
+/// <https://github.com/github/gitignore/tree/main/Global> periodically to
+/// pick up new tooling.
+pub const IGNORED_DIRS: &[&str] = &[
+    // VCS internals
+    ".git",
+    ".hg",
+    ".svn",
+    // Editor / IDE (github/gitignore Global/VisualStudioCode,
+    // Global/JetBrains, Global/Eclipse)
+    ".vscode",
+    ".idea",
+    ".classpath",
+    ".project",
+    ".settings",
+    // CI / tooling config, routinely committed
+    ".changeset",
+    ".circleci",
+    ".config",
+    ".cursor",
+    ".docker",
+    ".github",
+    ".husky",
+];

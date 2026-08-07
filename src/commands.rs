@@ -16,13 +16,12 @@ use crate::scanner::{get_directory_structure, process_files};
 /// otherwise the tree is followed by the contents of every file that passes
 /// the configured filters.
 pub fn run(config: Config) -> Result<()> {
-    let ignored_dirs = IGNORED_DIRS.as_slice();
-    let dir_structure = get_directory_structure(&config, ignored_dirs)?;
+    let dir_structure = get_directory_structure(&config, IGNORED_DIRS)?;
 
     if config.tree_only {
         fs::write(&config.output, &dir_structure)?;
     } else {
-        process_files(&config, &dir_structure, ignored_dirs)?;
+        process_files(&config, &dir_structure, IGNORED_DIRS)?;
     }
 
     Ok(())
