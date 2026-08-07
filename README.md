@@ -43,7 +43,7 @@ Run `fyai` in your terminal to combine files:
 You can specify options in a config file (YAML format):
 
 - **Local config:** `./fyai.yaml` (used if present in current directory)
-- **Global config:** System config directory (platform-specific), used if no local config found
+- **Global config:** System config directory, used if no local config found — `$XDG_CONFIG_HOME` if set to an absolute path (any platform), otherwise the platform default (e.g. `~/.config` on Linux, `~/Library/Application Support` on macOS)
 - **Precedence:** Local config overrides global config. CLI options override both config files.
 
 To see the exact global config path on your system, run:

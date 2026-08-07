@@ -119,9 +119,18 @@ pub fn discover_config_file() -> Option<PathBuf> {
     None
 }
 
-/// Returns the platform's config directory (e.g. `~/.config` on Linux),
-/// where the global `fyai.yaml` lives.
+/// Returns the platform's config directory, where the global `fyai.yaml`
+/// lives: `$XDG_CONFIG_HOME` if set to an absolute path (honored on every
+/// platform, not just Linux, matching the XDG Base Directory spec), else
+/// the platform default (e.g. `~/.config` on Linux, `~/Library/Application
+/// Support` on macOS).
 pub fn system_config_dir() -> Option<PathBuf> {
+    if let Some(xdg_config_home) = std::env::var_os("XDG_CONFIG_HOME") {
+        let path = PathBuf::from(xdg_config_home);
+        if path.is_absolute() {
+            return Some(path);
+        }
+    }
     dirs::config_dir()
 }
 
