@@ -68,6 +68,7 @@ mod tests {
 
     #[test]
     #[serial(env)]
+    #[cfg(not(target_os = "linux"))]
     fn should_ignore_clipboard_error_false_when_ci_unset_on_non_linux() {
         let _guard = EnvVarGuard::new("CI");
         unsafe { std::env::remove_var("CI") };
@@ -76,6 +77,26 @@ mod tests {
         // `cfg!`-gated and unreachable on this platform (not Linux), so
         // once CI is unset the function always returns false here.
         assert!(!should_ignore_clipboard_error());
+    }
+
+    #[test]
+    #[serial(env)]
+    #[cfg(target_os = "linux")]
+    fn should_ignore_clipboard_error_true_when_ci_unset_and_no_display_on_linux() {
+        let _ci_guard = EnvVarGuard::new("CI");
+        let _display_guard = EnvVarGuard::new("DISPLAY");
+        let _wayland_guard = EnvVarGuard::new("WAYLAND_DISPLAY");
+        let _sway_guard = EnvVarGuard::new("SWAYSOCK");
+        unsafe {
+            std::env::remove_var("CI");
+            std::env::remove_var("DISPLAY");
+            std::env::remove_var("WAYLAND_DISPLAY");
+            std::env::remove_var("SWAYSOCK");
+        }
+
+        // On Linux with no display server attached, no clipboard is ever
+        // expected to be available, so the error should be ignored.
+        assert!(should_ignore_clipboard_error());
     }
 
     #[test]
