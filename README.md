@@ -178,15 +178,23 @@ src
     └── helper.rs
 ```
 
-The combined file includes headers for each source file:
+Each source file follows as a heading plus a language-tagged, fenced code block, with a human-readable size:
 
+````
+### src/main.rs (1.2 KB)
+
+```rust
+fn main() {}
 ```
-- File: example.txt (12345 bytes)
-[contents of example.txt]
 
-- File: notes.md (67890 bytes)
+### notes.md (66.3 KB)
+
+```markdown
 [contents of notes.md]
 ```
+````
+
+The fence widens to four backticks for any file whose own content contains a triple backtick, so the block's end is never ambiguous.
 
 ## Contributing
 

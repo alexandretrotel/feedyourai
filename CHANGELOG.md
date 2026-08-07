@@ -20,6 +20,7 @@ Changed
 - `IGNORED_DIRS` trimmed to committed config/VCS directories only (`.github`, `.vscode`, `.git`, etc.); build/dependency/cache directories (`node_modules`, `target`, `.venv`, ...) are no longer hardcoded and now rely on `.gitignore` via `respect_gitignore`.
 - `IGNORED_DIRS` now parsed from a bundled `src/default_ignore_dirs.txt` ignore-list instead of a Rust array, seeded from github/gitignore's `Global/` editor/IDE templates plus VCS internals and common CI tooling.
 - `get_directory_structure` now dispatches between two renderers based on `config.human`: a minimal two-space indent by default, or `tree`-style ASCII connectors when set.
+- **Breaking:** Per-file output format changed from `- File: name (size bytes)` + raw content to a `### relative/path (human size)` heading followed by a language-tagged, fenced code block (language inferred from extension via the new `scanner::lang` module). The fence widens from ```` ``` ```` to ```` ```` ```` when the file's own content contains a triple backtick, so the block's end is never ambiguous — the old format had no closing delimiter at all.
 
 Removed
 - `IGNORED_FILES` constant and the hardcoded lockfile skip list. Use `exclude_files` to skip specific file names.
