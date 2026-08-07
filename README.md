@@ -76,84 +76,25 @@ Drop a `.fyaiignore` file (gitignore syntax) anywhere under the scanned director
 ### Basic Usage
 
 ```bash
-fyai
-fyai --help # show help
+fyai            # combine everything in the current directory into fyai.txt
+fyai --help     # show all options
 ```
-
-- Combines all files from the current directory into `fyai.txt`
 
 ### Examples
 
-- Combine only `.txt` and `.md` files from a specific directory:
-
-  ```bash
-  fyai -i ./docs --include-ext txt,md
-  ```
-
-- Exclude all `.log` and `.tmp` files from the output:
-
-  ```bash
-  fyai --exclude-ext log,tmp
-  ```
-
-- Include only files named `README.md` and `main.rs` from the `src` and `docs` directories:
-
-  ```bash
-  fyai --include-dirs src,docs --include-files README.md,main.rs
-  ```
-
-- Exclude all files named `LICENSE` and `config.json` from any directory:
-
-  ```bash
-  fyai --exclude-files LICENSE,config.json
-  ```
-
-- Include all files (no size minimum) up to 1MB:
-
-  ```bash
-  fyai -n 0 -m 1048576
-  ```
-
-- Custom output file with files between 10KB and 500KB, excluding `dist` and `node_modules` directories:
-
-  ```bash
-  fyai -n 10240 -m 512000 -o ai_input.txt -x dist,node_modules
-  ```
-
-- Output only the project directory structure (no file contents):
-
-  ```bash
-  fyai --tree-only -o tree.txt
-  ```
-
-- Render the directory tree with `tree`-style connector glyphs instead of the default minimal indent:
-
-  ```bash
-  fyai --tree-only --human -o tree.txt
-  ```
-
-- Ignore .gitignore rules and include all files (even those normally excluded):
-  ```bash
-  fyai --respect-gitignore false
-  ```
-
-- Run against a remote GitHub/GitLab repository without leaving the clone on disk:
-
-  ```bash
-  fyai --repo https://github.com/owner/repo.git --repo-branch main
-  ```
-
-- Run against a specific commit:
-
-  ```bash
-  fyai --repo https://github.com/owner/repo.git --repo-commit 1234abcd
-  ```
-
-- Generate a config template:
-
-  ```bash
-  fyai init
-  ```
+| Goal                                    | Command                                                             |
+| ---------------------------------------- | -------------------------------------------------------------------- |
+| Only `.txt`/`.md` files, from `./docs`   | `fyai -i ./docs --include-ext txt,md`                                 |
+| Exclude `.log`/`.tmp` files              | `fyai --exclude-ext log,tmp`                                          |
+| Only specific files, from specific dirs  | `fyai --include-dirs src,docs --include-files README.md,main.rs`      |
+| Exclude specific files everywhere        | `fyai --exclude-files LICENSE,config.json`                            |
+| Size window: 10KB–500KB, custom output   | `fyai -n 10240 -m 512000 -o ai_input.txt -x dist,node_modules`         |
+| Tree only, no file contents              | `fyai --tree-only -o tree.txt`                                        |
+| Tree with `tree`-style connector glyphs  | `fyai --tree-only --human -o tree.txt`                                |
+| Ignore `.gitignore` (include everything) | `fyai --respect-gitignore false`                                      |
+| Remote repo, specific branch             | `fyai --repo https://github.com/owner/repo.git --repo-branch main`    |
+| Remote repo, specific commit             | `fyai --repo https://github.com/owner/repo.git --repo-commit 1234abcd` |
+| Generate a config template               | `fyai init`                                                            |
 
 ## Output Format
 
@@ -197,23 +138,10 @@ fn main() {}
 
 The fence widens to four backticks for any file whose own content contains a triple backtick, so the block's end is never ambiguous.
 
-## Contributing
+## Performance
 
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Submit a pull request
+The directory is walked once, in parallel, and every file is read and UTF-8-checked in parallel too; output is written through a single buffered writer. Nothing to configure — it's just how `fyai` scans.
 
 ## License
 
 GPL-3.0 or later. See [LICENSE](LICENSE) for more details.
-
-## Changelog
-
-See `CHANGELOG.md` for release notes.
-
-## Acknowledgments
-
-- Built with [Rust](https://www.rust-lang.org/)
-- Uses [clap](https://crates.io/crates/clap) for command-line parsing
