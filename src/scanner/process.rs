@@ -26,7 +26,7 @@ pub fn process_files(
     write!(output, "{}", dir_structure)?;
 
     let filter = PathFilter::new(config, ignored_dirs);
-    let walker = build_walker(&config.directory, ignored_dirs, config)?;
+    let walker = build_walker(config, ignored_dirs)?;
     for entry in walker {
         let entry = entry.map_err(io::Error::other)?;
         let path = entry.path();
