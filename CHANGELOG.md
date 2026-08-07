@@ -17,6 +17,7 @@ Changed
 - CI split into `ci.yml` (fmt, clippy, machete, test), `build-binaries.yml`, and `release.yml`, each triggered on `push` to `main` in addition to pull requests.
 - `release.yml` now uploads both `fyai` and `feedyourai` binaries per target.
 - `IGNORED_DIRS` trimmed to committed config/VCS directories only (`.github`, `.vscode`, `.git`, etc.); build/dependency/cache directories (`node_modules`, `target`, `.venv`, ...) are no longer hardcoded and now rely on `.gitignore` via `respect_gitignore`.
+- `IGNORED_DIRS` now parsed from a bundled `src/default_ignore_dirs.txt` ignore-list instead of a Rust array, seeded from github/gitignore's `Global/` editor/IDE templates plus VCS internals and common CI tooling.
 
 Removed
 - `IGNORED_FILES` constant and the hardcoded lockfile skip list. Use `exclude_files` to skip specific file names.
