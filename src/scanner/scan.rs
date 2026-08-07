@@ -12,19 +12,41 @@ use super::collect::collect_entries;
 use super::process::write_file_contents;
 use super::tree::render_tree;
 
+/// Byte breakdown of a completed [`scan`] run.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct ScanStats {
+    /// Total size of every file entry the walk collected, regardless of
+    /// `config.tree_only` or the `min_size`/`max_size` content filters.
+    pub total_size: u64,
+    /// Summed size of files actually written to `config.output` (valid
+    /// UTF-8, within `min_size`/`max_size`). Always `0` when
+    /// `config.tree_only` is set, since no file contents are written.
+    pub written_size: u64,
+    /// Summed size of files that passed the `min_size`/`max_size` bounds but
+    /// failed UTF-8 decoding, so were skipped rather than written. Always
+    /// `0` when `config.tree_only` is set.
+    pub binary_size: u64,
+}
+
+impl ScanStats {
+    /// Size excluded purely by the `min_size`/`max_size` bounds, before a
+    /// file was ever read: `total_size - written_size - binary_size`.
+    pub fn size_filtered(&self) -> u64 {
+        self.total_size - self.written_size - self.binary_size
+    }
+}
+
 /// Writes `config.directory`'s (filtered) tree, and optionally its files'
 /// contents, to `config.output`.
 ///
-/// Returns the total size in bytes of every file entry the walk collected
-/// (regardless of `config.tree_only` or the `min_size`/`max_size` content
-/// filters, which only gate whether a file's *contents* are written).
-pub fn scan(config: &Config) -> io::Result<u64> {
+/// Returns a [`ScanStats`] breakdown of every file entry the walk collected.
+pub fn scan(config: &Config) -> io::Result<ScanStats> {
     let mut output = BufWriter::new(File::create(&config.output)?);
 
     if config.directory.read_dir()?.count() == 0 {
         write!(output, "- Tree Structure\n\nThe directory is empty.\n\n")?;
         output.flush()?;
-        return Ok(0);
+        return Ok(ScanStats::default());
     }
 
     let entries = collect_entries(config)?;
@@ -36,12 +58,18 @@ pub fn scan(config: &Config) -> io::Result<u64> {
         render_tree(&entries, &config.directory, config.human)
     )?;
 
-    if !config.tree_only {
-        write_file_contents(&entries, config, &mut output)?;
-    }
+    let (written_size, binary_size) = if !config.tree_only {
+        write_file_contents(&entries, config, &mut output)?
+    } else {
+        (0, 0)
+    };
 
     output.flush()?;
-    Ok(total_size)
+    Ok(ScanStats {
+        total_size,
+        written_size,
+        binary_size,
+    })
 }
 
 #[cfg(test)]
@@ -120,9 +148,9 @@ mod tests {
         let output_path = output_dir.path().join("fyai.txt");
 
         let config = base_config(scan_dir.path(), output_path);
-        let total_size = scan(&config).expect("scan should succeed");
+        let stats = scan(&config).expect("scan should succeed");
 
-        assert_eq!(total_size, 0);
+        assert_eq!(stats, ScanStats::default());
     }
 
     #[test]
@@ -140,9 +168,12 @@ mod tests {
         .expect("write"); // 12 bytes
 
         let config = base_config(scan_dir.path(), output_path);
-        let total_size = scan(&config).expect("scan should succeed");
+        let stats = scan(&config).expect("scan should succeed");
 
-        assert_eq!(total_size, 23);
+        assert_eq!(stats.total_size, 23);
+        assert_eq!(stats.written_size, 23);
+        assert_eq!(stats.binary_size, 0);
+        assert_eq!(stats.size_filtered(), 0);
     }
 
     #[test]
@@ -155,9 +186,11 @@ mod tests {
 
         let mut config = base_config(scan_dir.path(), output_path);
         config.tree_only = true;
-        let total_size = scan(&config).expect("scan should succeed");
+        let stats = scan(&config).expect("scan should succeed");
 
-        assert_eq!(total_size, 11);
+        assert_eq!(stats.total_size, 11);
+        assert_eq!(stats.written_size, 0);
+        assert_eq!(stats.binary_size, 0);
     }
 
     #[test]

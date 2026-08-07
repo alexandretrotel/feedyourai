@@ -10,16 +10,16 @@ use tempfile::TempDir;
 
 use crate::config::Config;
 use crate::error::{FyaiError, Result};
-use crate::scanner::scan;
+use crate::scanner::{ScanStats, scan};
 
 /// Combines files from a local directory as described by `config`.
 ///
 /// Writes the result to `config.output` (either the directory tree only, or
 /// the tree plus file contents, depending on `config.tree_only`), and
-/// returns the total size in bytes of every file the walk collected.
-pub fn run_local(config: Config) -> Result<u64> {
-    let total_size = scan(&config)?;
-    Ok(total_size)
+/// returns a byte breakdown of every file the walk collected.
+pub fn run_local(config: Config) -> Result<ScanStats> {
+    let stats = scan(&config)?;
+    Ok(stats)
 }
 
 /// Clones `repo_url` into a temporary directory, then runs the same combine
@@ -41,7 +41,7 @@ pub fn run_git(
     branch: Option<&str>,
     commit: Option<&str>,
     config: Config,
-) -> Result<u64> {
+) -> Result<ScanStats> {
     let (temp_dir, clone_path) = clone_repository(repo_url, branch, commit)?;
 
     let mut config = config;
@@ -222,7 +222,10 @@ mod tests {
 
         let result = run_local(config);
         assert!(result.is_ok(), "expected Ok, got {result:?}");
-        assert_eq!(result.unwrap(), 24); // "content of a" + "content of b", 12 bytes each
+        let stats = result.unwrap();
+        assert_eq!(stats.total_size, 24); // "content of a" + "content of b", 12 bytes each
+        assert_eq!(stats.written_size, 24);
+        assert_eq!(stats.binary_size, 0);
 
         let contents = read_output(&output_path);
         assert!(!contents.is_empty());

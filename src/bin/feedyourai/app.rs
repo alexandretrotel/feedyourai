@@ -67,7 +67,7 @@ where
     let output_path = config.output.clone();
     let tree_only = config.tree_only;
 
-    let total_size = if let Some(repo_url) = repo_url {
+    let stats = if let Some(repo_url) = repo_url {
         run_git(
             &repo_url,
             repo_branch.as_deref(),
@@ -81,7 +81,7 @@ where
 
     if tree_only {
         println!("Project tree written to {}", output_path.display());
-        println!("Total size walked: {}", format_size(total_size));
+        println!("Total size walked: {}", format_size(stats.total_size));
         return Ok(());
     }
 
@@ -89,7 +89,16 @@ where
         .wrap_err_with(|| format!("failed to read output file {}", output_path.display()))?;
 
     println!("Files combined successfully into {}", output_path.display());
-    println!("Total size walked: {}", format_size(total_size));
+    println!("Total size walked: {}", format_size(stats.total_size));
+    println!(
+        "  Non-binary (written): {}",
+        format_size(stats.written_size)
+    );
+    println!("  Binary (skipped): {}", format_size(stats.binary_size));
+    let size_filtered = stats.size_filtered();
+    if size_filtered > 0 {
+        println!("  Skipped by size filter: {}", format_size(size_filtered));
+    }
 
     if cli.clipboard {
         match clipboard::copy_to_clipboard(&output_contents) {

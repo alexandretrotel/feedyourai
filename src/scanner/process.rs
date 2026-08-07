@@ -17,44 +17,78 @@ use crate::config::Config;
 use super::collect::Entry;
 use super::lang::fence_language;
 
+/// Outcome of reading one entry whose size passed `config`'s bounds: either
+/// valid UTF-8 text ready to be written, or a byte count for a file that
+/// decoded as binary (and so is skipped from the output).
+enum FileRead {
+    Written {
+        path: PathBuf,
+        size: u64,
+        text: String,
+    },
+    Binary(u64),
+}
+
 /// Reads and decodes every file `entry` in parallel (I/O and UTF-8
 /// validation are the expensive parts, and are independent per file), then
 /// writes the resulting blocks to `output` in the original, deterministic
 /// order.
+///
+/// Returns `(written_size, binary_size)`: the summed size of files actually
+/// written to `output`, and the summed size of files that passed the
+/// `min_size`/`max_size` bounds but failed UTF-8 decoding. The difference
+/// between the entries' total size and `written_size + binary_size` is the
+/// size filtered out by `min_size`/`max_size` before any file was even read.
 pub(crate) fn write_file_contents<W: Write>(
     entries: &[Entry],
     config: &Config,
     output: &mut W,
-) -> io::Result<()> {
-    let blocks: Vec<(PathBuf, u64, String)> = entries
+) -> io::Result<(u64, u64)> {
+    let reads: Vec<FileRead> = entries
         .par_iter()
         .filter(|entry| !entry.is_dir)
-        .filter_map(|entry| read_file_block(entry, config))
+        .filter_map(|entry| classify_file(entry, config))
         .collect();
 
-    for (path, size, text) in &blocks {
-        write_file_block(output, &config.directory, path, *size, text)?;
+    let mut written_size = 0u64;
+    let mut binary_size = 0u64;
+    for read in &reads {
+        match read {
+            FileRead::Written { path, size, text } => {
+                write_file_block(output, &config.directory, path, *size, text)?;
+                written_size += size;
+            }
+            FileRead::Binary(size) => binary_size += size,
+        }
     }
 
-    Ok(())
+    Ok((written_size, binary_size))
 }
 
-/// Reads `entry`'s contents if its size passes `config`'s bounds and it
-/// decodes as UTF-8; returns `None` otherwise (binary/oversized/undersized
-/// files are silently skipped, same as before).
-fn read_file_block(entry: &Entry, config: &Config) -> Option<(PathBuf, u64, String)> {
+/// Reads `entry`'s contents if its size passes `config`'s bounds, classifying
+/// the result as [`FileRead::Written`] (valid UTF-8) or [`FileRead::Binary`]
+/// (anything else); returns `None` if the size is out of bounds or the file
+/// couldn't be read at all (e.g. a permissions error), same as before.
+fn classify_file(entry: &Entry, config: &Config) -> Option<FileRead> {
     let size = entry.size.unwrap_or(0);
     if !size_allowed(size, config.min_size, config.max_size) {
         return None;
     }
 
     let contents = fs::read(&entry.path).ok()?;
-    simdutf8::basic::from_utf8(&contents).ok()?;
-    // SAFETY: `contents` was just validated as well-formed UTF-8 above, and
-    // hasn't been touched since.
-    let text = unsafe { String::from_utf8_unchecked(contents) };
-
-    Some((entry.path.clone(), size, text))
+    match simdutf8::basic::from_utf8(&contents) {
+        Ok(_) => {
+            // SAFETY: `contents` was just validated as well-formed UTF-8
+            // above, and hasn't been touched since.
+            let text = unsafe { String::from_utf8_unchecked(contents) };
+            Some(FileRead::Written {
+                path: entry.path.clone(),
+                size,
+                text,
+            })
+        }
+        Err(_) => Some(FileRead::Binary(size)),
+    }
 }
 
 /// Returns true if `size` falls within the inclusive `[min, max]` bounds,
@@ -308,10 +342,10 @@ mod tests {
         assert_eq!(out, "\n### /other/tree/file.txt (3 B)\n\n```\nhi\n```\n");
     }
 
-    // ---- read_file_block ----
+    // ---- classify_file ----
 
     #[test]
-    fn read_file_block_returns_contents_within_bounds() {
+    fn classify_file_returns_written_within_bounds() {
         let dir = tempfile::tempdir().unwrap();
         let file_path = dir.path().join("a.txt");
         fs::write(&file_path, "hello world").unwrap();
@@ -324,12 +358,18 @@ mod tests {
         };
         let config = base_config(dir.path().to_path_buf());
 
-        let result = read_file_block(&entry, &config);
-        assert_eq!(result, Some((file_path, 11, "hello world".to_string())));
+        match classify_file(&entry, &config) {
+            Some(FileRead::Written { path, size, text }) => {
+                assert_eq!(path, file_path);
+                assert_eq!(size, 11);
+                assert_eq!(text, "hello world");
+            }
+            other => panic!("expected Written, got {}", matches_label(&other)),
+        }
     }
 
     #[test]
-    fn read_file_block_none_when_below_min_size() {
+    fn classify_file_none_when_below_min_size() {
         let dir = tempfile::tempdir().unwrap();
         let file_path = dir.path().join("a.txt");
         fs::write(&file_path, "hello world").unwrap();
@@ -343,11 +383,11 @@ mod tests {
         let mut config = base_config(dir.path().to_path_buf());
         config.min_size = Some(100);
 
-        assert_eq!(read_file_block(&entry, &config), None);
+        assert!(classify_file(&entry, &config).is_none());
     }
 
     #[test]
-    fn read_file_block_none_when_above_max_size() {
+    fn classify_file_none_when_above_max_size() {
         let dir = tempfile::tempdir().unwrap();
         let file_path = dir.path().join("a.txt");
         fs::write(&file_path, "hello world").unwrap();
@@ -361,11 +401,11 @@ mod tests {
         let mut config = base_config(dir.path().to_path_buf());
         config.max_size = Some(5);
 
-        assert_eq!(read_file_block(&entry, &config), None);
+        assert!(classify_file(&entry, &config).is_none());
     }
 
     #[test]
-    fn read_file_block_none_for_invalid_utf8() {
+    fn classify_file_binary_for_invalid_utf8() {
         let dir = tempfile::tempdir().unwrap();
         let file_path = dir.path().join("bin.dat");
         fs::write(&file_path, [0xFFu8, 0xFE]).unwrap();
@@ -378,11 +418,14 @@ mod tests {
         };
         let config = base_config(dir.path().to_path_buf());
 
-        assert_eq!(read_file_block(&entry, &config), None);
+        match classify_file(&entry, &config) {
+            Some(FileRead::Binary(size)) => assert_eq!(size, 2),
+            other => panic!("expected Binary, got {}", matches_label(&other)),
+        }
     }
 
     #[test]
-    fn read_file_block_none_for_nonexistent_path() {
+    fn classify_file_none_for_nonexistent_path() {
         let dir = tempfile::tempdir().unwrap();
         let file_path = dir.path().join("missing.txt");
 
@@ -394,7 +437,17 @@ mod tests {
         };
         let config = base_config(dir.path().to_path_buf());
 
-        assert_eq!(read_file_block(&entry, &config), None);
+        assert!(classify_file(&entry, &config).is_none());
+    }
+
+    /// Renders a `Option<FileRead>` variant name for panic messages, since
+    /// `FileRead` can't derive `Debug` (it holds file contents).
+    fn matches_label(read: &Option<FileRead>) -> &'static str {
+        match read {
+            None => "None",
+            Some(FileRead::Written { .. }) => "Written",
+            Some(FileRead::Binary(_)) => "Binary",
+        }
     }
 
     // ---- write_file_contents ----
@@ -456,7 +509,8 @@ mod tests {
         config.max_size = Some(50);
 
         let mut output: Vec<u8> = Vec::new();
-        write_file_contents(&entries, &config, &mut output).unwrap();
+        let (written_size, binary_size) =
+            write_file_contents(&entries, &config, &mut output).unwrap();
         let text = String::from_utf8(output).unwrap();
 
         assert!(text.contains("### good1.txt (11 B)"));
@@ -465,6 +519,11 @@ mod tests {
         assert!(text.contains("second file\n"));
         assert!(!text.contains("big.txt"));
         assert!(!text.contains("bin.dat"));
+
+        // good1.txt (11) + good2.txt (12); big.txt is excluded by max_size
+        // before it's ever read, so only bin.dat (2) counts as binary.
+        assert_eq!(written_size, 23);
+        assert_eq!(binary_size, 2);
 
         let pos1 = text.find("good1.txt").expect("good1 present");
         let pos2 = text.find("good2.txt").expect("good2 present");
@@ -476,7 +535,9 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let config = base_config(dir.path().to_path_buf());
         let mut output: Vec<u8> = Vec::new();
-        write_file_contents(&[], &config, &mut output).unwrap();
+        let (written_size, binary_size) = write_file_contents(&[], &config, &mut output).unwrap();
         assert!(output.is_empty());
+        assert_eq!(written_size, 0);
+        assert_eq!(binary_size, 0);
     }
 }

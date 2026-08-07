@@ -15,4 +15,4 @@ mod scan;
 mod tree;
 mod walker;
 
-pub use scan::scan;
+pub use scan::{ScanStats, scan};

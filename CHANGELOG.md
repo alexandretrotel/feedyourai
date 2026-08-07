@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-08-07 - 3.2.0
+
+Added
+- The full-combine run now breaks down `Total size walked` into `Non-binary (written)` and `Binary (skipped)` size, plus a `Skipped by size filter` line when `min_size`/`max_size` excluded anything, so it's clear how much of the walked size actually made it into the output.
+- `scan`/`run_local`/`run_git` now return a `ScanStats` struct (`total_size`, `written_size`, `binary_size`, plus a `size_filtered()` helper) instead of a bare `u64`.
+
+Changed
+- **Breaking:** `run_local`/`run_git` now return `Result<ScanStats>` instead of `Result<u64>`.
+
 ## 2026-08-07 - 3.1.0
 
 Added
