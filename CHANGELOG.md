@@ -16,6 +16,7 @@ Changed
 - README demo GIF now uses a raw GitHub link so it renders on crates.io.
 - CI split into `ci.yml` (fmt, clippy, machete, test), `build-binaries.yml`, and `release.yml`, each triggered on `push` to `main` in addition to pull requests.
 - `release.yml` now uploads both `fyai` and `feedyourai` binaries per target.
+- `IGNORED_DIRS` trimmed to committed config/VCS directories only (`.github`, `.vscode`, `.git`, etc.); build/dependency/cache directories (`node_modules`, `target`, `.venv`, ...) are no longer hardcoded and now rely on `.gitignore` via `respect_gitignore`.
 
 Added (crate metadata)
 - `keywords`, `categories`, and `readme` fields for crates.io discoverability.
