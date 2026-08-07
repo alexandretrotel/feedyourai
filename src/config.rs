@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use directories_next::BaseDirs;
 use color_eyre::eyre::{Result, WrapErr};
 
 #[derive(Debug, PartialEq, Clone)]
@@ -42,7 +41,7 @@ impl FileConfig {
         let path = path.as_ref();
         let content = fs::read_to_string(path)
             .wrap_err_with(|| format!("failed to read config file {}", path.display()))?;
-        let config: FileConfig = serde_yaml::from_str(&content)
+        let config: FileConfig = yaml_serde::from_str(&content)
             .wrap_err_with(|| format!("YAML parse error in {}", path.display()))?;
         Ok(config)
     }
@@ -63,7 +62,7 @@ pub fn discover_config_file() -> Option<PathBuf> {
 }
 
 pub fn system_config_dir() -> Option<PathBuf> {
-    BaseDirs::new().map(|dirs| dirs.config_dir().to_path_buf())
+    dirs::config_dir()
 }
 
 #[derive(Debug, Clone, Copy)]
