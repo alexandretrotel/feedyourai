@@ -1,4 +1,4 @@
-# fyai
+# feedyourai
 
 A command-line tool to combine files from a directory into a single file for AI processing, with flexible filtering options.
 
