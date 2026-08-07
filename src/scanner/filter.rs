@@ -1,9 +1,16 @@
+//! Per-entry include/exclude decisions, layered on top of the walker's own
+//! ignore rules.
+
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::config::Config;
 
+/// Decides whether a walked path should be included in the scan, based on
+/// the output file's own path and the configured include/exclude filters.
+///
+/// Built once per run and reused for every entry the walker yields.
 pub struct PathFilter<'a> {
     config: &'a Config,
     ignored_dirs: &'a [&'a str],
@@ -12,6 +19,8 @@ pub struct PathFilter<'a> {
 }
 
 impl<'a> PathFilter<'a> {
+    /// Creates a filter for `config`, additionally rejecting any component
+    /// matching `ignored_dirs`.
     pub fn new(config: &'a Config, ignored_dirs: &'a [&'a str]) -> Self {
         let canonical_output_path = fs::canonicalize(&config.output).ok();
         let normalized_filters = NormalizedFilterConfig::new(config);
@@ -24,6 +33,8 @@ impl<'a> PathFilter<'a> {
         }
     }
 
+    /// Returns whether `path` should be walked into (if a directory) or
+    /// included in the output (if a file).
     pub fn allows_entry(&self, path: &Path, is_dir: bool) -> bool {
         if self.is_output_path(path) {
             return false;
@@ -37,6 +48,8 @@ impl<'a> PathFilter<'a> {
         self.is_file_allowed(path)
     }
 
+    /// Returns true if `path` is the run's own output file, which must never
+    /// be read back into itself.
     fn is_output_path(&self, path: &Path) -> bool {
         if let Some(canonical_output_path) = &self.canonical_output_path
             && let Ok(path_canon) = fs::canonicalize(path)
@@ -122,6 +135,8 @@ impl<'a> PathFilter<'a> {
     }
 }
 
+/// Lower-cased, set-based view of a [`Config`]'s include/exclude lists, built
+/// once so per-entry checks are O(1) lookups instead of repeated scans.
 struct NormalizedFilterConfig {
     include_dirs: Option<HashSet<String>>,
     exclude_dirs: Option<HashSet<String>>,
@@ -144,11 +159,14 @@ impl NormalizedFilterConfig {
     }
 }
 
+/// Lower-cases every item of `list` into a [`HashSet`], or returns `None` if
+/// `list` is `None`.
 fn normalize_list(list: &Option<Vec<String>>) -> Option<HashSet<String>> {
     list.as_ref()
         .map(|items| items.iter().map(|item| item.to_lowercase()).collect())
 }
 
+/// Returns true if any path component of `path`, lower-cased, is in `set`.
 fn any_component_in_set(path: &Path, set: &HashSet<String>) -> bool {
     path.components().any(|component| {
         component
@@ -159,6 +177,8 @@ fn any_component_in_set(path: &Path, set: &HashSet<String>) -> bool {
     })
 }
 
+/// Returns true if any path component of `path` case-insensitively matches
+/// an entry of `list`.
 fn any_component_matches_list(path: &Path, list: &[&str]) -> bool {
     path.components().any(|component| {
         component
