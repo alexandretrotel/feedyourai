@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased - 3.0.0
+
+Added
+- `fyai` as a second binary target, aliasing `feedyourai` (same CLI, no behavior difference).
+- `error` module with a `FyaiError` type (via `thiserror`), replacing `color-eyre` in the library crate.
+
+Changed
+- **Breaking:** CLI wiring (`cli`, `init`, clipboard) moved out of the library into the `fyai`/`feedyourai` binaries; the library no longer prints to stdout/stderr or copies to the clipboard, and no longer depends on `color-eyre`.
+- Replaced `serde_yaml` (archived) with `yaml_serde`.
+- Replaced `directories-next` with `dirs` for locating system config directories.
+- `documentation` field in `Cargo.toml` now points to `docs.rs` instead of the GitHub repo.
+- README demo GIF now uses a raw GitHub link so it renders on crates.io.
+- CI split into `ci.yml` (fmt, clippy, machete, test), `build-binaries.yml`, and `release.yml`, each triggered on `push` to `main` in addition to pull requests.
+- `release.yml` now uploads both `fyai` and `feedyourai` binaries per target.
+
+Added (crate metadata)
+- `keywords`, `categories`, and `readme` fields for crates.io discoverability.
+
 ## 2.1.3 - 2026-07-31
 
 Changed

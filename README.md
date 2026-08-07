@@ -2,7 +2,7 @@
 
 A command-line tool to combine files from a directory into a single file for AI processing, with flexible filtering options.
 
-![Demo: fyai combining files in a terminal](./assets/fyai.gif)
+![Demo: fyai combining files in a terminal](https://raw.githubusercontent.com/alexandretrotel/feedyourai/main/assets/fyai.gif)
 
 ## Features
 
@@ -32,7 +32,7 @@ Or,
 cargo install --git https://github.com/alexandretrotel/feedyourai.git
 ```
 
-This installs the `fyai` binary to `~/.cargo/bin/`. Ensure this directory is in your `PATH`.
+This installs the `feedyourai` binary (and its `fyai` alias) to `~/.cargo/bin/`. Ensure this directory is in your `PATH`.
 
 ## Usage
 
