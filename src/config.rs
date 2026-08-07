@@ -1,7 +1,7 @@
 //! Configuration types (CLI-agnostic) and config-file discovery/merging.
 //!
 //! [`Config`] is what the scanning/combining logic actually runs on.
-//! [`FileConfig`](crate::config::FileConfig) is its optional,
+//! [`PartialConfig`](crate::config::PartialConfig) is its optional,
 //! partially-specified counterpart: one instance loaded from a `fyai.yaml`
 //! file, another built from CLI flags (`None` for anything not explicitly
 //! passed, so an unset CLI flag can't shadow a config-file value).
@@ -51,7 +51,7 @@ pub struct Config {
 /// to the other source, then to a built-in default, when merged via
 /// [`merge_config`].
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
-pub struct FileConfig {
+pub struct PartialConfig {
     /// See [`Config::directory`].
     pub directory: Option<String>,
     /// See [`Config::output`].
@@ -80,7 +80,7 @@ pub struct FileConfig {
     pub human: Option<bool>,
 }
 
-impl FileConfig {
+impl PartialConfig {
     /// Reads and parses a `fyai.yaml`-style config file from `path`.
     ///
     /// # Errors
@@ -94,7 +94,7 @@ impl FileConfig {
             path: path.to_path_buf(),
             source,
         })?;
-        let config: FileConfig =
+        let config: PartialConfig =
             yaml_serde::from_str(&content).map_err(|source| FyaiError::ParseConfig {
                 path: path.to_path_buf(),
                 source,
@@ -136,9 +136,9 @@ pub fn system_config_dir() -> Option<PathBuf> {
     dirs::config_dir()
 }
 
-/// Merges two [`FileConfig`]s into a final [`Config`]: `cli`'s value wins
+/// Merges two [`PartialConfig`]s into a final [`Config`]: `cli`'s value wins
 /// wherever set, otherwise `file`'s, otherwise the built-in default.
-pub fn merge_config(file: FileConfig, cli: FileConfig) -> Config {
+pub fn merge_config(file: PartialConfig, cli: PartialConfig) -> Config {
     let directory = cli
         .directory
         .or(file.directory)

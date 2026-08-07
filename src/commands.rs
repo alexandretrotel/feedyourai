@@ -7,7 +7,7 @@ use std::fs;
 use crate::config::Config;
 use crate::constants::IGNORED_DIRS;
 use crate::error::Result;
-use crate::scanner::{get_directory_structure, process_files};
+use crate::scanner::{get_directory_tree, process_files};
 
 /// Runs a combine pass against `config.directory`, writing the result to
 /// `config.output`.
@@ -16,7 +16,7 @@ use crate::scanner::{get_directory_structure, process_files};
 /// otherwise the tree is followed by the contents of every file that passes
 /// the configured filters.
 pub fn run(config: Config) -> Result<()> {
-    let dir_structure = get_directory_structure(&config, IGNORED_DIRS)?;
+    let dir_structure = get_directory_tree(&config, IGNORED_DIRS)?;
 
     if config.tree_only {
         fs::write(&config.output, &dir_structure)?;

@@ -8,4 +8,4 @@ mod utils;
 mod walker;
 
 pub use process::process_files;
-pub use structure::get_directory_structure;
+pub use structure::get_directory_tree;

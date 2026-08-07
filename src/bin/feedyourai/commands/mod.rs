@@ -1,11 +1,11 @@
 //! Argument parsing: the [`Cli`] struct, its `init` subcommand, and
 //! conversion of parsed `clap` matches into a library
-//! [`FileConfig`](feedyourai::config::FileConfig).
+//! [`PartialConfig`](feedyourai::config::PartialConfig).
 
 use clap::{ArgAction, Parser, Subcommand, parser::ValueSource};
 
 use color_eyre::eyre::{Result, eyre};
-use feedyourai::config::FileConfig;
+use feedyourai::config::PartialConfig;
 
 /// The `init` subcommand: writes a starter `fyai.yaml`.
 pub mod init;
@@ -179,7 +179,7 @@ pub enum Command {
     },
 }
 
-/// Converts parsed `clap` matches into a [`FileConfig`], leaving a field
+/// Converts parsed `clap` matches into a [`PartialConfig`], leaving a field
 /// `None` unless it was explicitly set on the command line — so an unset
 /// flag can't shadow a `fyai.yaml` value when [`merge_config`] reconciles
 /// the two.
@@ -188,7 +188,7 @@ pub enum Command {
 ///
 /// Comma-separated list options (`include_dirs`, `exclude_ext`, ...) are
 /// split, trimmed, lower-cased, and emptied entries dropped.
-pub fn config_from_matches(matches: clap::ArgMatches) -> Result<FileConfig> {
+pub fn config_from_matches(matches: clap::ArgMatches) -> Result<PartialConfig> {
     let directory = explicit_string(&matches, "input");
     let output = explicit_string(&matches, "output");
 
@@ -277,7 +277,7 @@ pub fn config_from_matches(matches: clap::ArgMatches) -> Result<FileConfig> {
     let tree_only = explicit_flag(&matches, "tree_only");
     let human = explicit_flag(&matches, "human");
 
-    Ok(FileConfig {
+    Ok(PartialConfig {
         directory,
         output,
         include_dirs,

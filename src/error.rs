@@ -22,7 +22,7 @@ pub enum FyaiError {
     },
 
     /// The config file at `path` was read but is not valid YAML for
-    /// [`crate::config::FileConfig`].
+    /// [`crate::config::PartialConfig`].
     #[error("YAML parse error in {path}: {source}")]
     ParseConfig {
         /// Path of the config file that failed to parse.

@@ -35,7 +35,7 @@ struct Node {
 ///
 /// Returns a single-line "The directory is empty." body if the root has no
 /// entries at all (before filtering).
-pub fn get_directory_structure(config: &Config, ignored_dirs: &[&str]) -> io::Result<String> {
+pub fn get_directory_tree(config: &Config, ignored_dirs: &[&str]) -> io::Result<String> {
     let root = &config.directory;
     let mut structure = String::new();
     structure.push_str("- Tree Structure\n\n");
