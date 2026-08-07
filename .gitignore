@@ -1,5 +1,6 @@
 # Output files
 target/**
+index.scip
 
 # fyai
 feedyourai.txt
