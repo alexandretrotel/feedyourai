@@ -2,30 +2,36 @@
 //! ignore rules.
 
 use std::collections::HashSet;
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::ffi::OsString;
+use std::path::Path;
 
 use crate::config::Config;
 
 /// Decides whether a walked path should be included in the scan, based on
 /// the output file's own path and the configured include/exclude filters.
 ///
-/// Built once per run and reused for every entry the walker yields.
+/// Built once per run and shared (by reference, across threads) for every
+/// entry the walker yields.
 pub struct PathFilter<'a> {
+    /// The run's full configuration, consulted for the output path itself
+    /// and for anything [`NormalizedFilterConfig`] doesn't already cover.
     config: &'a Config,
-    canonical_output_path: Option<PathBuf>,
+    /// `config.output`'s file name, checked before falling back to
+    /// [`same_file::is_same_file`] in [`PathFilter::is_output_path`].
+    output_file_name: Option<OsString>,
+    /// Lower-cased, set-based view of `config`'s include/exclude lists.
     normalized_filters: NormalizedFilterConfig,
 }
 
 impl<'a> PathFilter<'a> {
     /// Creates a filter for `config`.
     pub fn new(config: &'a Config) -> Self {
-        let canonical_output_path = fs::canonicalize(&config.output).ok();
+        let output_file_name = config.output.file_name().map(|name| name.to_os_string());
         let normalized_filters = NormalizedFilterConfig::new(config);
 
         Self {
             config,
-            canonical_output_path,
+            output_file_name,
             normalized_filters,
         }
     }
@@ -47,13 +53,18 @@ impl<'a> PathFilter<'a> {
 
     /// Returns true if `path` is the run's own output file, which must never
     /// be read back into itself.
+    ///
+    /// Almost every walked entry has a different file name than the output
+    /// file, so that's checked first with no syscalls; only a name match
+    /// pays for [`same_file::is_same_file`]'s two `stat` calls, which is far
+    /// cheaper than canonicalizing (resolving every symlink in) both full
+    /// paths on every single entry.
     fn is_output_path(&self, path: &Path) -> bool {
-        if let Some(canonical_output_path) = &self.canonical_output_path
-            && let Ok(path_canon) = fs::canonicalize(path)
-        {
-            return path_canon == *canonical_output_path;
+        if path.file_name() != self.output_file_name.as_deref() {
+            return false;
         }
-        path == self.config.output
+        same_file::is_same_file(path, &self.config.output)
+            .unwrap_or_else(|_| path == self.config.output)
     }
 
     fn is_dir_allowed(&self, path: &Path) -> bool {
@@ -91,38 +102,50 @@ impl<'a> PathFilter<'a> {
     }
 
     fn file_name_allowed(&self, path: &Path) -> bool {
+        let excludes = &self.normalized_filters.exclude_files;
+        let includes = &self.normalized_filters.include_files;
+        if excludes.is_none() && includes.is_none() {
+            return true;
+        }
+
         let file_name = path
             .file_name()
             .and_then(|f| f.to_str())
             .unwrap_or_default()
             .to_lowercase();
 
-        if let Some(excludes) = &self.normalized_filters.exclude_files
+        if let Some(excludes) = excludes
             && excludes.contains(&file_name)
         {
             return false;
         }
 
-        match &self.normalized_filters.include_files {
+        match includes {
             Some(includes) => includes.contains(&file_name),
             None => true,
         }
     }
 
     fn extension_allowed(&self, path: &Path) -> bool {
+        let excludes = &self.normalized_filters.exclude_ext;
+        let includes = &self.normalized_filters.include_ext;
+        if excludes.is_none() && includes.is_none() {
+            return true;
+        }
+
         let ext = path
             .extension()
             .and_then(|e| e.to_str())
             .unwrap_or("")
             .to_lowercase();
 
-        if let Some(excludes) = &self.normalized_filters.exclude_ext
+        if let Some(excludes) = excludes
             && excludes.contains(&ext)
         {
             return false;
         }
 
-        match &self.normalized_filters.include_ext {
+        match includes {
             Some(includes) => includes.contains(&ext),
             None => true,
         }
@@ -132,11 +155,17 @@ impl<'a> PathFilter<'a> {
 /// Lower-cased, set-based view of a [`Config`]'s include/exclude lists, built
 /// once so per-entry checks are O(1) lookups instead of repeated scans.
 struct NormalizedFilterConfig {
+    /// Lower-cased [`Config::include_dirs`](crate::config::Config::include_dirs).
     include_dirs: Option<HashSet<String>>,
+    /// Lower-cased [`Config::exclude_dirs`](crate::config::Config::exclude_dirs).
     exclude_dirs: Option<HashSet<String>>,
+    /// Lower-cased [`Config::include_files`](crate::config::Config::include_files).
     include_files: Option<HashSet<String>>,
+    /// Lower-cased [`Config::exclude_files`](crate::config::Config::exclude_files).
     exclude_files: Option<HashSet<String>>,
+    /// Lower-cased [`Config::include_ext`](crate::config::Config::include_ext).
     include_ext: Option<HashSet<String>>,
+    /// Lower-cased [`Config::exclude_ext`](crate::config::Config::exclude_ext).
     exclude_ext: Option<HashSet<String>>,
 }
 
