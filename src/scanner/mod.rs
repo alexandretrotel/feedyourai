@@ -13,7 +13,6 @@ mod lang;
 mod process;
 mod scan;
 mod tree;
-mod utils;
 mod walker;
 
 pub use scan::scan;
