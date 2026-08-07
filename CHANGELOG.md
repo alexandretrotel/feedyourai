@@ -22,9 +22,16 @@ Changed
 - `IGNORED_DIRS` now parsed from a bundled `src/default_ignore_dirs.txt` ignore-list instead of a Rust array, seeded from github/gitignore's `Global/` editor/IDE templates plus VCS internals and common CI tooling.
 - `get_directory_structure` now dispatches between two renderers based on `config.human`: a minimal two-space indent by default, or `tree`-style ASCII connectors when set.
 - **Breaking:** Per-file output format changed from `- File: name (size bytes)` + raw content to a `### relative/path (human size)` heading followed by a language-tagged, fenced code block (language inferred from extension via the new `scanner::lang` module). The fence widens from ```` ``` ```` to ```` ```` ```` when the file's own content contains a triple backtick, so the block's end is never ambiguous — the old format had no closing delimiter at all.
+- **Breaking:** `merge_config` now takes two `FileConfig`s (`file`, `cli`) instead of a `FileConfig` plus a fully-resolved `Config` and a separate `ExplicitFlags`. CLI parsing (`config_from_matches`) now returns a `FileConfig` directly, leaving a field `None` unless it was explicitly passed, instead of always resolving to a concrete value and tracking "was this explicit" on the side.
+- Wording: replaced "AI" with "LLM" throughout descriptions and doc comments (binary names `feedyourai`/`fyai` unchanged).
+
+Fixed
+- `--repo`'s `conflicts_with` referenced a nonexistent `directory` arg id (the actual id is `input`), which made every CLI invocation panic at startup.
+- `--no-gitignore` detection looked up the wrong arg id (`respect_gitignore`, which doesn't exist) and tried to parse it as a string; the flag was never actually read. Now correctly negates the `no_gitignore` `SetTrue` flag.
 
 Removed
 - `IGNORED_FILES` constant and the hardcoded lockfile skip list. Use `exclude_files` to skip specific file names.
+- `ExplicitFlags` struct — superseded by `FileConfig`-based CLI parsing (see Changed).
 
 Added (crate metadata)
 - `keywords`, `categories`, and `readme` fields for crates.io discoverability.
