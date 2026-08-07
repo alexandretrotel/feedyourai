@@ -1,3 +1,7 @@
+//! Small standalone helpers shared across the scanner submodules.
+
+/// Returns true if `size` falls within the inclusive `[min, max]` bounds,
+/// treating a missing bound as unconstrained.
 pub(crate) fn size_allowed(size: u64, min: Option<u64>, max: Option<u64>) -> bool {
     if let Some(min) = min
         && size < min
