@@ -2,9 +2,11 @@
 //!
 //! [`Config`] is what the scanning/combining logic actually runs on.
 //! [`FileConfig`](crate::config::FileConfig) is its optional,
-//! partially-specified counterpart loaded from a `fyai.yaml` file;
-//! [`merge_config`](crate::config::merge_config) reconciles a `FileConfig`
-//! with CLI-supplied values.
+//! partially-specified counterpart: one instance loaded from a `fyai.yaml`
+//! file, another built from CLI flags (`None` for anything not explicitly
+//! passed, so an unset CLI flag can't shadow a config-file value).
+//! [`merge_config`](crate::config::merge_config) reconciles the two, CLI
+//! winning over file, file winning over the built-in default.
 
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -44,10 +46,10 @@ pub struct Config {
     pub human: bool,
 }
 
-/// Partially-specified configuration as loaded from a `fyai.yaml` file.
-///
-/// Every field is optional; unset fields fall back to the CLI-supplied
-/// [`Config`] value when merged via [`merge_config`].
+/// Partially-specified configuration, either loaded from a `fyai.yaml` file
+/// or built from CLI flags. Every field is optional; unset fields fall back
+/// to the other source, then to a built-in default, when merged via
+/// [`merge_config`].
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct FileConfig {
     /// See [`Config::directory`].
@@ -134,59 +136,27 @@ pub fn system_config_dir() -> Option<PathBuf> {
     dirs::config_dir()
 }
 
-/// Tracks which [`Config`] fields were explicitly set on the command line,
-/// so [`merge_config`] knows whether a CLI default should lose to a config
-/// file value.
-#[derive(Debug, Clone, Copy)]
-pub struct ExplicitFlags {
-    /// Whether `--input`/`-i` was passed explicitly.
-    pub directory: bool,
-    /// Whether `--output`/`-o` was passed explicitly.
-    pub output: bool,
-    /// Whether `--no-gitignore` was passed explicitly.
-    pub respect_gitignore: bool,
-    /// Whether `--tree-only` was passed explicitly.
-    pub tree_only: bool,
-    /// Whether `--human` was passed explicitly.
-    pub human: bool,
-}
+/// Merges two [`FileConfig`]s into a final [`Config`]: `cli`'s value wins
+/// wherever set, otherwise `file`'s, otherwise the built-in default.
+pub fn merge_config(file: FileConfig, cli: FileConfig) -> Config {
+    let directory = cli
+        .directory
+        .or(file.directory)
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("."));
 
-/// Merges a [`FileConfig`] with CLI-supplied values into a final [`Config`].
-///
-/// For fields tracked by `explicit`, an explicit CLI value always wins.
-/// Otherwise, the config file's value is preferred, falling back to the CLI
-/// default. Fields without an `explicit` flag (the `include_*`/`exclude_*`
-/// and size filters) simply prefer the CLI value when present.
-pub fn merge_config(file: FileConfig, cli: Config, explicit: ExplicitFlags) -> Config {
-    let directory = if explicit.directory {
-        cli.directory
-    } else {
-        file.directory.map(PathBuf::from).unwrap_or(cli.directory)
-    };
+    let output = cli
+        .output
+        .or(file.output)
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("fyai.txt"));
 
-    let output = if explicit.output {
-        cli.output
-    } else {
-        file.output.map(PathBuf::from).unwrap_or(cli.output)
-    };
-
-    let respect_gitignore = if explicit.respect_gitignore {
-        cli.respect_gitignore
-    } else {
-        file.respect_gitignore.unwrap_or(cli.respect_gitignore)
-    };
-
-    let tree_only = if explicit.tree_only {
-        cli.tree_only
-    } else {
-        file.tree_only.unwrap_or(cli.tree_only)
-    };
-
-    let human = if explicit.human {
-        cli.human
-    } else {
-        file.human.unwrap_or(cli.human)
-    };
+    let respect_gitignore = cli
+        .respect_gitignore
+        .or(file.respect_gitignore)
+        .unwrap_or(true);
+    let tree_only = cli.tree_only.or(file.tree_only).unwrap_or(false);
+    let human = cli.human.or(file.human).unwrap_or(false);
 
     Config {
         directory,
