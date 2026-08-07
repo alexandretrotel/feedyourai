@@ -49,7 +49,11 @@ include_files = ["README.md", "main.rs"]
 exclude_files = ["LICENSE", "config.json"]
 min_size = 10240
 max_size = 512000
-respect_gitignore = true
+hidden = true
+gitignore = true
+ignore_files = true
+git_global = true
+follow_links = false
 tree_only = false
 human = false
 "#;

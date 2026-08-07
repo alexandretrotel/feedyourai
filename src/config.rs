@@ -38,8 +38,21 @@ pub struct Config {
     pub min_size: Option<u64>,
     /// Files larger than this many bytes are skipped.
     pub max_size: Option<u64>,
-    /// Whether to honor `.gitignore` and friends while walking.
-    pub respect_gitignore: bool,
+    /// Whether to skip hidden files and directories (dot-files). Independent
+    /// of `gitignore`/`ignore_files`/`git_global`.
+    pub hidden: bool,
+    /// Whether to honor `.gitignore` files: the local `.gitignore`,
+    /// `.git/info/exclude`, and `.gitignore` files in directories above
+    /// `directory`.
+    pub gitignore: bool,
+    /// Whether to honor plain `.ignore` files (the ripgrep/ag convention),
+    /// independent of `.gitignore`.
+    pub ignore_files: bool,
+    /// Whether to honor git's global excludes file (`core.excludesFile`,
+    /// typically `~/.config/git/ignore`).
+    pub git_global: bool,
+    /// Whether to follow symbolic links while walking.
+    pub follow_links: bool,
     /// If true, only the directory tree is written; file contents are skipped.
     pub tree_only: bool,
     /// If true, renders the directory tree with `tree`-style connector
@@ -73,8 +86,16 @@ pub struct PartialConfig {
     pub min_size: Option<u64>,
     /// See [`Config::max_size`].
     pub max_size: Option<u64>,
-    /// See [`Config::respect_gitignore`].
-    pub respect_gitignore: Option<bool>,
+    /// See [`Config::hidden`].
+    pub hidden: Option<bool>,
+    /// See [`Config::gitignore`].
+    pub gitignore: Option<bool>,
+    /// See [`Config::ignore_files`].
+    pub ignore_files: Option<bool>,
+    /// See [`Config::git_global`].
+    pub git_global: Option<bool>,
+    /// See [`Config::follow_links`].
+    pub follow_links: Option<bool>,
     /// See [`Config::tree_only`].
     pub tree_only: Option<bool>,
     /// See [`Config::human`].
@@ -152,10 +173,11 @@ pub fn merge_config(file: PartialConfig, cli: PartialConfig) -> Config {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("fyai.txt"));
 
-    let respect_gitignore = cli
-        .respect_gitignore
-        .or(file.respect_gitignore)
-        .unwrap_or(true);
+    let hidden = cli.hidden.or(file.hidden).unwrap_or(true);
+    let gitignore = cli.gitignore.or(file.gitignore).unwrap_or(true);
+    let ignore_files = cli.ignore_files.or(file.ignore_files).unwrap_or(true);
+    let git_global = cli.git_global.or(file.git_global).unwrap_or(true);
+    let follow_links = cli.follow_links.or(file.follow_links).unwrap_or(false);
     let tree_only = cli.tree_only.or(file.tree_only).unwrap_or(false);
     let human = cli.human.or(file.human).unwrap_or(false);
 
@@ -170,7 +192,11 @@ pub fn merge_config(file: PartialConfig, cli: PartialConfig) -> Config {
         exclude_files: cli.exclude_files.or(file.exclude_files),
         min_size: cli.min_size.or(file.min_size),
         max_size: cli.max_size.or(file.max_size),
-        respect_gitignore,
+        hidden,
+        gitignore,
+        ignore_files,
+        git_global,
+        follow_links,
         tree_only,
         human,
     }

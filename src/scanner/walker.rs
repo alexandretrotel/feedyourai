@@ -19,27 +19,35 @@ use crate::config::Config;
 ///
 /// `config.exclude_dirs` is always excluded via override patterns. A
 /// `.fyaiignore` file (gitignore syntax) is honored in any directory it
-/// appears in, unconditionally — unlike `.gitignore`/`.ignore`/global
-/// gitignore/`.git/info/exclude`, it is *not* affected by
-/// `config.respect_gitignore`, since it's fyai's own dedicated exclude
-/// mechanism rather than a git-ecosystem one. When `config.respect_gitignore`
-/// is false, all of those git-ecosystem sources (plus parent-directory
-/// lookups) are disabled, *and* dot-files/dot-directories (hidden entries)
-/// are walked too, since `ignore`'s hidden-file filter is otherwise on by
-/// default alongside them.
+/// appears in, unconditionally — unlike the knobs below, it's *not*
+/// controlled by any `Config` field, since it's fyai's own dedicated exclude
+/// mechanism rather than a git-ecosystem one.
+///
+/// Every other `ignore`-crate filter is controlled independently, rather
+/// than as one all-or-nothing switch:
+///
+/// - `config.hidden` gates dot-files/dot-directories.
+/// - `config.gitignore` gates `.gitignore`, `.git/info/exclude`, and
+///   `.gitignore` files in parent directories, together (splitting these
+///   three further isn't worth the surface area — they're all "git's own
+///   ignore mechanism" and are essentially always toggled as a unit).
+/// - `config.ignore_files` gates plain `.ignore` files, independently of
+///   `.gitignore` (a repo without git can still use `.ignore`).
+/// - `config.git_global` gates git's global excludes file.
+/// - `config.follow_links` gates symlink traversal — a different axis
+///   entirely (not an ignore rule at all), but exposed here too since it's
+///   the same builder.
 pub fn build_walker(config: &Config) -> io::Result<WalkParallel> {
     let mut builder = WalkBuilder::new(&config.directory);
-    builder.standard_filters(true);
+    builder
+        .hidden(config.hidden)
+        .parents(config.gitignore)
+        .ignore(config.ignore_files)
+        .git_ignore(config.gitignore)
+        .git_global(config.git_global)
+        .git_exclude(config.gitignore)
+        .follow_links(config.follow_links);
     builder.add_custom_ignore_filename(".fyaiignore");
-    if !config.respect_gitignore {
-        builder
-            .hidden(false)
-            .ignore(false)
-            .git_ignore(false)
-            .git_global(false)
-            .git_exclude(false)
-            .parents(false);
-    }
     builder.overrides(build_overrides(config)?);
     Ok(builder.build_parallel())
 }

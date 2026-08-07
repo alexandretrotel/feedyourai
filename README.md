@@ -14,8 +14,8 @@ A command-line tool to combine files from a directory into a single file for LLM
   - File extensions (e.g., `.txt`, `.md`)
   - Directory inclusion/exclusion
   - File inclusion/exclusion
-  - Optionally respects `.gitignore`/`.ignore` rules and skips hidden files/directories (dot-files); `--no-gitignore` disables both, walking hidden entries too
-  - Always respects a `.fyaiignore` file (gitignore syntax), regardless of `--no-gitignore`
+  - Independently controllable walk rules, each on by default (except symlink-following): hidden files/directories (`--no-hidden`), `.gitignore`/`.git/info/exclude`/parent `.gitignore` (`--no-gitignore`), plain `.ignore` files (`--no-ignore-files`), git's global excludes file (`--no-git-global`), and symlink traversal (`--follow-links`)
+  - Always respects a `.fyaiignore` file (gitignore syntax), regardless of the walk rules above
 - Preserves file boundaries with headers showing filename and size
 - Customizable input directory and output file
 
@@ -60,7 +60,11 @@ include_ext = ["md", "txt"]
 exclude_dirs = ["node_modules", "dist"]
 min_size = 10240
 max_size = 512000
-respect_gitignore = true
+hidden = true
+gitignore = true
+ignore_files = true
+git_global = true
+follow_links = false
 tree_only = false
 human = false
 ```
@@ -69,7 +73,7 @@ All CLI options can be set in the config file. CLI flags always take precedence.
 
 ### Path Exclusion via `.fyaiignore`
 
-Drop a `.fyaiignore` file (gitignore syntax) anywhere under the scanned directory to exclude matching paths, as an alternative or complement to `exclude_dirs`/`exclude_files`. Unlike `.gitignore`, it's always respected — `--no-gitignore`/`respect_gitignore: false` has no effect on it, since it's fyai's own dedicated exclude mechanism rather than a git one.
+Drop a `.fyaiignore` file (gitignore syntax) anywhere under the scanned directory to exclude matching paths, as an alternative or complement to `exclude_dirs`/`exclude_files`. Unlike `.gitignore`, it's always respected — none of the walk-rule flags (`--no-hidden`, `--no-gitignore`, `--no-ignore-files`, `--no-git-global`, `--follow-links`) affect it, since it's fyai's own dedicated exclude mechanism rather than a git one.
 
 ## Usage
 
@@ -91,7 +95,10 @@ fyai --help     # show all options
 | Size window: 10KB–500KB, custom output   | `fyai -n 10240 -m 512000 -o ai_input.txt -x dist,node_modules`         |
 | Tree only, no file contents              | `fyai --tree-only -o tree.txt`                                        |
 | Tree with `tree`-style connector glyphs  | `fyai --tree-only --human -o tree.txt`                                |
-| Ignore `.gitignore` and hidden-file rules (include everything) | `fyai --respect-gitignore false`                        |
+| Include hidden files, still respect `.gitignore` | `fyai --no-hidden`                                              |
+| Include `.gitignore`-excluded files, still skip hidden files | `fyai --no-gitignore`                                      |
+| Include everything (hidden + gitignored + `.ignore`d + globally-excluded) | `fyai --no-hidden --no-gitignore --no-ignore-files --no-git-global` |
+| Follow symlinks while walking             | `fyai --follow-links`                                                 |
 | Remote repo, specific branch             | `fyai --repo https://github.com/owner/repo.git --repo-branch main`    |
 | Remote repo, specific commit             | `fyai --repo https://github.com/owner/repo.git --repo-commit 1234abcd` |
 | Generate a config template               | `fyai init`                                                            |

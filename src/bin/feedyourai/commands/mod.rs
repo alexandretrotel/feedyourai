@@ -132,14 +132,49 @@ pub struct Cli {
     )]
     pub max_size: Option<u64>,
 
-    /// Sets whether to respect .gitignore/.ignore and friends \[default:
-    /// true\]. `.fyaiignore` is always respected regardless of this flag.
+    /// Sets whether to skip hidden files/directories (dot-files) \[default:
+    /// true\].
+    #[arg(
+        long = "no-hidden",
+        action = ArgAction::SetTrue,
+        help = "Sets whether to skip hidden files/directories (dot-files) [default: true]"
+    )]
+    pub no_hidden: bool,
+
+    /// Sets whether to respect `.gitignore`/`.git/info/exclude`/parent
+    /// `.gitignore` files \[default: true\]. `.fyaiignore` is always
+    /// respected regardless of this flag.
     #[arg(
         long = "no-gitignore",
         action = ArgAction::SetTrue,
-        help = "Sets whether to respect .gitignore/.ignore and friends [default: true] (.fyaiignore is always respected)"
+        help = "Sets whether to respect .gitignore/.git/info/exclude/parent .gitignore files [default: true] (.fyaiignore is always respected)"
     )]
     pub no_gitignore: bool,
+
+    /// Sets whether to respect plain `.ignore` files (the ripgrep/ag
+    /// convention), independent of `.gitignore` \[default: true\].
+    #[arg(
+        long = "no-ignore-files",
+        action = ArgAction::SetTrue,
+        help = "Sets whether to respect plain .ignore files, independent of .gitignore [default: true]"
+    )]
+    pub no_ignore_files: bool,
+
+    /// Sets whether to respect git's global excludes file \[default: true\].
+    #[arg(
+        long = "no-git-global",
+        action = ArgAction::SetTrue,
+        help = "Sets whether to respect git's global excludes file [default: true]"
+    )]
+    pub no_git_global: bool,
+
+    /// Follows symbolic links while walking \[default: false\].
+    #[arg(
+        long = "follow-links",
+        action = ArgAction::SetTrue,
+        help = "Follow symbolic links while walking [default: false]"
+    )]
+    pub follow_links: bool,
 
     /// Only outputs the project directory tree, no file contents.
     #[arg(long = "tree-only", action = ArgAction::SetTrue, help = "Only output the project directory tree, no file contents")]
@@ -270,10 +305,14 @@ pub fn config_from_matches(matches: clap::ArgMatches) -> Result<PartialConfig> {
         },
     };
 
-    // `--no-gitignore` is a negated flag: respect_gitignore is the opposite
-    // of whatever was passed.
-    let respect_gitignore =
-        explicit_flag(&matches, "no_gitignore").map(|no_gitignore| !no_gitignore);
+    // The `--no-*` flags are negated: the `Config` field is the opposite of
+    // whatever was passed.
+    let hidden = explicit_flag(&matches, "no_hidden").map(|no_hidden| !no_hidden);
+    let gitignore = explicit_flag(&matches, "no_gitignore").map(|no_gitignore| !no_gitignore);
+    let ignore_files =
+        explicit_flag(&matches, "no_ignore_files").map(|no_ignore_files| !no_ignore_files);
+    let git_global = explicit_flag(&matches, "no_git_global").map(|no_git_global| !no_git_global);
+    let follow_links = explicit_flag(&matches, "follow_links");
     let tree_only = explicit_flag(&matches, "tree_only");
     let human = explicit_flag(&matches, "human");
 
@@ -288,7 +327,11 @@ pub fn config_from_matches(matches: clap::ArgMatches) -> Result<PartialConfig> {
         exclude_files,
         min_size,
         max_size,
-        respect_gitignore,
+        hidden,
+        gitignore,
+        ignore_files,
+        git_global,
+        follow_links,
         tree_only,
         human,
     })
