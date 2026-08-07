@@ -13,13 +13,26 @@ mod clipboard;
 /// Argument parsing and the `init` subcommand.
 mod commands;
 
-/// Runs the CLI end to end: parses arguments, resolves configuration
-/// (merging any `fyai.toml` with CLI flags), runs the combine, and reports
-/// the result to stdout/stderr, including a best-effort clipboard copy.
+/// Runs the CLI end to end: installs `color_eyre`'s error/panic hooks, then
+/// parses the real process arguments and delegates to [`execute`].
 pub(crate) fn run() -> Result<()> {
     color_eyre::install()?;
+    execute(std::env::args_os())
+}
 
-    let matches = Cli::command().get_matches();
+/// Parses `args`, resolves configuration (merging any `fyai.toml` with CLI
+/// flags), runs the combine, and reports the result to stdout/stderr,
+/// including a best-effort clipboard copy.
+///
+/// Split out from [`run`] so it can be exercised directly, with an explicit
+/// argument list, from tests — `run` itself can't be called more than once
+/// per process, since `color_eyre::install()` errors on a second call.
+fn execute<I, T>(args: I) -> Result<()>
+where
+    I: IntoIterator<Item = T>,
+    T: Into<std::ffi::OsString> + Clone,
+{
+    let matches = Cli::command().get_matches_from(args);
     let cli = Cli::from_arg_matches(&matches).wrap_err("failed to parse arguments")?;
 
     if commands::init::handle_init_subcommand(&cli)? {
@@ -85,4 +98,201 @@ pub(crate) fn run() -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serial_test::serial;
+    use std::path::PathBuf;
+
+    /// Restores the process's working directory on drop, even on panic —
+    /// `execute` reads `./fyai.toml` relative to cwd, so tests that don't
+    /// want a config file picked up (or want a specific one) must isolate
+    /// their cwd.
+    struct CwdGuard {
+        original: PathBuf,
+    }
+
+    impl CwdGuard {
+        fn enter(dir: &std::path::Path) -> Self {
+            let original = std::env::current_dir().unwrap();
+            std::env::set_current_dir(dir).unwrap();
+            Self { original }
+        }
+    }
+
+    impl Drop for CwdGuard {
+        fn drop(&mut self) {
+            let _ = std::env::set_current_dir(&self.original);
+        }
+    }
+
+    /// Restores the `CI` env var on drop — `should_ignore_clipboard_error`
+    /// reads it, and this sandbox has no real clipboard, so combine runs
+    /// that reach the clipboard step need `CI` set for a deterministic
+    /// `Ok(())`.
+    struct CiEnvGuard {
+        original: Option<std::ffi::OsString>,
+    }
+
+    impl CiEnvGuard {
+        fn set() -> Self {
+            let original = std::env::var_os("CI");
+            unsafe { std::env::set_var("CI", "1") };
+            Self { original }
+        }
+    }
+
+    impl Drop for CiEnvGuard {
+        fn drop(&mut self) {
+            match &self.original {
+                Some(value) => unsafe { std::env::set_var("CI", value) },
+                None => unsafe { std::env::remove_var("CI") },
+            }
+        }
+    }
+
+    #[test]
+    #[serial(env)]
+    fn execute_init_subcommand_writes_config_and_returns_ok() {
+        let dir = tempfile::tempdir().unwrap();
+        let _cwd = CwdGuard::enter(dir.path());
+
+        let result = execute(["fyai", "init"]);
+
+        assert!(result.is_ok());
+        assert!(dir.path().join("fyai.toml").exists());
+    }
+
+    #[test]
+    #[serial(env)]
+    fn execute_init_subcommand_fails_when_config_already_exists() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("fyai.toml"), "directory = \".\"\n").unwrap();
+        let _cwd = CwdGuard::enter(dir.path());
+
+        let err = execute(["fyai", "init"]).unwrap_err();
+
+        assert!(err.to_string().contains("already exists"));
+    }
+
+    #[test]
+    #[serial(env)]
+    fn execute_combines_local_directory_and_copies_to_clipboard() {
+        let scan_dir = tempfile::tempdir().unwrap();
+        std::fs::write(scan_dir.path().join("a.txt"), "hello").unwrap();
+        let cwd_dir = tempfile::tempdir().unwrap();
+        let output = cwd_dir.path().join("out.txt");
+        let _cwd = CwdGuard::enter(cwd_dir.path());
+        let _ci = CiEnvGuard::set();
+
+        let result = execute([
+            "fyai".into(),
+            "-i".into(),
+            scan_dir.path().as_os_str().to_owned(),
+            "-o".into(),
+            output.as_os_str().to_owned(),
+        ]);
+
+        assert!(result.is_ok(), "{result:?}");
+        let contents = std::fs::read_to_string(&output).unwrap();
+        assert!(contents.contains("a.txt"));
+        assert!(contents.contains("hello"));
+    }
+
+    #[test]
+    #[serial(env)]
+    fn execute_tree_only_returns_ok_without_touching_clipboard() {
+        let scan_dir = tempfile::tempdir().unwrap();
+        std::fs::write(scan_dir.path().join("a.txt"), "hello").unwrap();
+        let cwd_dir = tempfile::tempdir().unwrap();
+        let output = cwd_dir.path().join("out.txt");
+        let _cwd = CwdGuard::enter(cwd_dir.path());
+
+        // No CiEnvGuard here: tree-only returns before the clipboard step
+        // is ever reached, so this must succeed regardless of CI/clipboard
+        // availability.
+        let result = execute([
+            "fyai".into(),
+            "-i".into(),
+            scan_dir.path().as_os_str().to_owned(),
+            "-o".into(),
+            output.as_os_str().to_owned(),
+            "--tree-only".into(),
+        ]);
+
+        assert!(result.is_ok(), "{result:?}");
+        assert!(output.exists());
+    }
+
+    #[test]
+    #[serial(env)]
+    fn execute_loads_valid_local_config_file() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("a.txt"), "hello").unwrap();
+        std::fs::write(
+            dir.path().join("fyai.toml"),
+            "output = \"out.txt\"\ntree_only = true\n",
+        )
+        .unwrap();
+        let _cwd = CwdGuard::enter(dir.path());
+
+        let result = execute(["fyai"]);
+
+        assert!(result.is_ok(), "{result:?}");
+        assert!(dir.path().join("out.txt").exists());
+    }
+
+    #[test]
+    #[serial(env)]
+    fn execute_warns_and_falls_back_on_invalid_local_config_file() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("a.txt"), "hello").unwrap();
+        std::fs::write(dir.path().join("fyai.toml"), "not = [valid toml").unwrap();
+        let _cwd = CwdGuard::enter(dir.path());
+        let _ci = CiEnvGuard::set();
+
+        let result = execute(["fyai", "-o", "out.txt"]);
+
+        assert!(result.is_ok(), "{result:?}");
+        assert!(dir.path().join("out.txt").exists());
+    }
+
+    #[test]
+    #[serial(env)]
+    fn execute_propagates_local_directory_error() {
+        let cwd_dir = tempfile::tempdir().unwrap();
+        let _cwd = CwdGuard::enter(cwd_dir.path());
+        let missing = cwd_dir.path().join("does-not-exist");
+
+        let err = execute([
+            "fyai".into(),
+            "-i".into(),
+            missing.as_os_str().to_owned(),
+            "-o".into(),
+            cwd_dir.path().join("out.txt").as_os_str().to_owned(),
+        ])
+        .unwrap_err();
+
+        assert!(err.to_string().contains("failed to process local directory"));
+    }
+
+    #[test]
+    #[serial(env)]
+    fn execute_propagates_git_repo_error() {
+        let cwd_dir = tempfile::tempdir().unwrap();
+        let _cwd = CwdGuard::enter(cwd_dir.path());
+
+        let err = execute([
+            "fyai",
+            "--repo",
+            "/nonexistent/path/that/does/not/exist",
+            "-o",
+            "out.txt",
+        ])
+        .unwrap_err();
+
+        assert!(err.to_string().contains("failed to process git repository"));
+    }
 }
