@@ -1,62 +1,95 @@
-//! Writes the directory tree plus the contents of every file that passes
-//! the configured filters into the output file.
+//! Writes the contents of every collected file entry that passes the size
+//! filter to the output writer.
+//!
+//! Files that fail UTF-8 decoding are silently skipped (binary files aren't
+//! meaningful to include in an LLM-facing text dump); everything else is
+//! appended as a `### path (size)` heading followed by a language-tagged,
+//! fenced code block (see `write_file_block`).
 
-use std::fs::{self, File};
-use std::io::{self, Read, Write};
-use std::path::Path;
+use std::fs;
+use std::io::{self, Write};
+use std::path::{Path, PathBuf};
+
+use rayon::prelude::*;
 
 use crate::config::Config;
 
-use super::filter::PathFilter;
+use super::collect::Entry;
 use super::lang::fence_language;
-use super::utils::{format_size, size_allowed};
-use super::walker::build_walker;
 
-/// Writes `dir_structure` followed by the contents of every matching file
-/// under `config.directory` to `config.output`.
-///
-/// Files that fail UTF-8 decoding are silently skipped (binary files aren't
-/// meaningful to include in an LLM-facing text dump); everything else is
-/// filtered by the path filter and size bounds before being appended as a
-/// `### path (size)` heading followed by a language-tagged, fenced code
-/// block (see `write_file_block`).
-pub fn process_files(config: &Config, dir_structure: &str) -> io::Result<()> {
-    let mut output = File::create(&config.output)?;
-    write!(output, "{}", dir_structure)?;
+/// Reads and decodes every file `entry` in parallel (I/O and UTF-8
+/// validation are the expensive parts, and are independent per file), then
+/// writes the resulting blocks to `output` in the original, deterministic
+/// order.
+pub(crate) fn write_file_contents<W: Write>(
+    entries: &[Entry],
+    config: &Config,
+    output: &mut W,
+) -> io::Result<()> {
+    let blocks: Vec<(PathBuf, u64, String)> = entries
+        .par_iter()
+        .filter(|entry| !entry.is_dir)
+        .filter_map(|entry| read_file_block(entry, config))
+        .collect();
 
-    let filter = PathFilter::new(config);
-    let walker = build_walker(config)?;
-    for entry in walker {
-        let entry = entry.map_err(io::Error::other)?;
-        let path = entry.path();
-        let is_dir = entry
-            .file_type()
-            .map(|file_type| file_type.is_dir())
-            .unwrap_or_else(|| path.is_dir());
-
-        if !filter.allows_entry(path, is_dir) {
-            continue;
-        }
-        if is_dir {
-            continue;
-        }
-
-        let file_size = fs::metadata(path)?.len();
-        if !size_allowed(file_size, config.min_size, config.max_size) {
-            continue;
-        }
-
-        let mut file = File::open(path)?;
-        let mut contents = Vec::new();
-        file.read_to_end(&mut contents)?;
-
-        if let Ok(text) = String::from_utf8(contents) {
-            write_file_block(&mut output, &config.directory, path, file_size, &text)?;
-        }
+    for (path, size, text) in &blocks {
+        write_file_block(output, &config.directory, path, *size, text)?;
     }
 
-    output.flush()?;
     Ok(())
+}
+
+/// Reads `entry`'s contents if its size passes `config`'s bounds and it
+/// decodes as UTF-8; returns `None` otherwise (binary/oversized/undersized
+/// files are silently skipped, same as before).
+fn read_file_block(entry: &Entry, config: &Config) -> Option<(PathBuf, u64, String)> {
+    let size = entry.size.unwrap_or(0);
+    if !size_allowed(size, config.min_size, config.max_size) {
+        return None;
+    }
+
+    let contents = fs::read(&entry.path).ok()?;
+    simdutf8::basic::from_utf8(&contents).ok()?;
+    // SAFETY: `contents` was just validated as well-formed UTF-8 above, and
+    // hasn't been touched since.
+    let text = unsafe { String::from_utf8_unchecked(contents) };
+
+    Some((entry.path.clone(), size, text))
+}
+
+/// Returns true if `size` falls within the inclusive `[min, max]` bounds,
+/// treating a missing bound as unconstrained.
+fn size_allowed(size: u64, min: Option<u64>, max: Option<u64>) -> bool {
+    if let Some(min) = min
+        && size < min
+    {
+        return false;
+    }
+    if let Some(max) = max
+        && size > max
+    {
+        return false;
+    }
+    true
+}
+
+/// Formats `bytes` as a human-readable size (`"512 B"`, `"1.2 KB"`, `"3.4
+/// MB"`, ...), using 1024 as the unit step.
+fn format_size(bytes: u64) -> String {
+    const UNITS: [&str; 4] = ["B", "KB", "MB", "GB"];
+
+    let mut size = bytes as f64;
+    let mut unit = 0;
+    while size >= 1024.0 && unit < UNITS.len() - 1 {
+        size /= 1024.0;
+        unit += 1;
+    }
+
+    if unit == 0 {
+        format!("{bytes} B")
+    } else {
+        format!("{size:.1} {}", UNITS[unit])
+    }
 }
 
 /// Appends one file's heading and fenced code block to `output`.
@@ -65,8 +98,8 @@ pub fn process_files(config: &Config, dir_structure: &str) -> io::Result<()> {
 /// backtick, so the block's end is never ambiguous. The language tag is
 /// inferred from `path`'s extension via [`fence_language`], falling back to
 /// a plain, untagged fence when unrecognized.
-fn write_file_block(
-    output: &mut File,
+fn write_file_block<W: Write>(
+    output: &mut W,
     root: &Path,
     path: &Path,
     file_size: u64,
