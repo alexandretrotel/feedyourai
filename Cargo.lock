@@ -359,7 +359,7 @@ dependencies = [
 
 [[package]]
 name = "feedyourai"
-version = "2.1.3"
+version = "3.0.0"
 dependencies = [
  "arboard",
  "clap",
@@ -368,6 +368,7 @@ dependencies = [
  "ignore",
  "serde",
  "tempfile",
+ "thiserror",
  "yaml_serde",
 ]
 

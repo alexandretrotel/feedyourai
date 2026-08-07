@@ -1,12 +1,12 @@
 [package]
 name = "feedyourai"
-version = "2.1.3"
+version = "3.0.0"
 edition = "2024"
 description = "A tool to combine text files for AI processing with flexible filtering options."
 authors = ["Alexandre Trotel"]
 homepage = "https://github.com/alexandretrotel/feedyourai"
 repository = "https://github.com/alexandretrotel/feedyourai"
-documentation = "https://github.com/alexandretrotel/feedyourai"
+documentation = "https://docs.rs/feedyourai"
 include = ["src/**/*.rs", "Cargo.toml", "README.md", "LICENSE", "CHANGELOG.md"]
 license = "GPL-3.0-or-later"
 readme = "README.md"
@@ -15,7 +15,11 @@ categories = ["command-line-utilities", "development-tools", "filesystem"]
 
 [[bin]]
 name = "fyai"
-path = "src/main.rs"
+path = "src/bin/fyai/main.rs"
+
+[[bin]]
+name = "feedyourai"
+path = "src/bin/feedyourai/main.rs"
 
 [dependencies]
 clap = { version = "4.6", features = ["derive"] }
@@ -26,3 +30,4 @@ ignore = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 yaml_serde = "0.10.4"
 tempfile = "3.27"
+thiserror = "2"
