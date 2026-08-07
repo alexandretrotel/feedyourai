@@ -1,3 +1,5 @@
+//! Directory walking, filtering, and file-combining logic.
+
 mod filter;
 mod process;
 mod structure;
