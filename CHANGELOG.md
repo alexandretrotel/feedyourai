@@ -29,6 +29,7 @@ Changed
 Fixed
 - `--repo`'s `conflicts_with` referenced a nonexistent `directory` arg id (the actual id is `input`), which made every CLI invocation panic at startup.
 - `--no-gitignore` detection looked up the wrong arg id (`respect_gitignore`, which doesn't exist) and tried to parse it as a string; the flag was never actually read. Now correctly negates the `no_gitignore` `SetTrue` flag.
+- CLI `--help` and `init --global`'s help text hardcoded `~/.config/fyai.yaml` as the global config path, which is wrong on macOS/Windows and ignores `$XDG_CONFIG_HOME`. Now describes the actual resolution and points to `fyai init --global` for the exact path.
 
 Removed
 - `IGNORED_FILES` constant and the hardcoded lockfile skip list. Use `exclude_files` to skip specific file names.
