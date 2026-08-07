@@ -19,7 +19,7 @@ use super::walker::build_walker;
 /// meaningful to include in an AI-facing text dump); everything else is
 /// filtered by the path filter and size bounds before being appended as a
 /// `### path (size)` heading followed by a language-tagged, fenced code
-/// block (see [`write_file_block`]).
+/// block (see `write_file_block`).
 pub fn process_files(
     config: &Config,
     dir_structure: &str,
