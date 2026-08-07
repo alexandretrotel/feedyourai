@@ -28,6 +28,6 @@ color-eyre = "0.6"
 dirs = "6.0"
 ignore = "0.4"
 serde = { version = "1.0", features = ["derive"] }
-yaml_serde = "0.10.4"
+yaml_serde = "0.10"
 tempfile = "3.27"
 thiserror = "2"
