@@ -34,3 +34,8 @@ simdutf8 = "0.1"
 toml = "1"
 tempfile = "3.27"
 thiserror = "2"
+
+[dev-dependencies]
+assert_cmd = "2.2.2"
+predicates = "3.1.4"
+serial_test = "4.0.1"

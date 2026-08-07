@@ -123,3 +123,111 @@ fn render_glyph_tree(nodes: &[Node<'_>], prefix: &str, output: &mut String) {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    /// Builds a small [`Entry`] fixture. `size` is `None` for directories,
+    /// `Some(0)` for files (the tree renderer never reads it).
+    fn entry(path: &str, depth: usize, is_dir: bool) -> Entry {
+        Entry {
+            path: PathBuf::from(path),
+            depth,
+            is_dir,
+            size: if is_dir { None } else { Some(0) },
+        }
+    }
+
+    /// A 3-level fixture with both a non-last and a last node at every
+    /// nested level, so both `├──`/`│   ` and `└──`/`    ` connectors get
+    /// exercised:
+    ///
+    /// ```text
+    /// a/       (dir, not last)
+    ///   a1     (file, not last)
+    ///   a2/    (dir, last)
+    ///     a2a  (file, only/last child)
+    /// b        (file, last)
+    /// ```
+    fn deep_entries() -> Vec<Entry> {
+        vec![
+            entry("a", 1, true),
+            entry("a/a1", 2, false),
+            entry("a/a2", 2, true),
+            entry("a/a2/a2a", 3, false),
+            entry("b", 1, false),
+        ]
+    }
+
+    #[test]
+    fn renders_indent_tree_for_nested_entries() {
+        let out = render_tree(&deep_entries(), Path::new("myproj"), false);
+        assert_eq!(
+            out,
+            "- Tree Structure\n\nmyproj/\n  a/\n    a1\n    a2/\n      a2a\n  b\n\n"
+        );
+    }
+
+    #[test]
+    fn renders_glyph_tree_for_nested_entries() {
+        let out = render_tree(&deep_entries(), Path::new("myproj"), true);
+        assert_eq!(
+            out,
+            "- Tree Structure\n\nmyproj\n├── a/\n│   ├── a1\n│   └── a2/\n│       └── a2a\n└── b\n\n"
+        );
+    }
+
+    #[test]
+    fn glyph_tree_handles_directories_with_no_children() {
+        // `x` has a sibling at the same depth right after it (no children),
+        // and `y` is last with nothing after it at all (peek() is None).
+        // Both should hit the `_ => Vec::new()` arm in `build_children`.
+        let entries = vec![entry("x", 1, true), entry("y", 1, true)];
+        let out = render_tree(&entries, Path::new("myproj"), true);
+        assert_eq!(out, "- Tree Structure\n\nmyproj\n├── x/\n└── y/\n\n");
+    }
+
+    #[test]
+    fn renders_empty_entries_as_header_and_root_only_indent() {
+        let out = render_tree(&[], Path::new("myproj"), false);
+        assert_eq!(out, "- Tree Structure\n\nmyproj/\n\n");
+    }
+
+    #[test]
+    fn renders_empty_entries_as_header_and_root_only_glyph() {
+        let out = render_tree(&[], Path::new("myproj"), true);
+        assert_eq!(out, "- Tree Structure\n\nmyproj\n\n");
+    }
+
+    #[test]
+    fn root_label_falls_back_to_dot_when_file_name_is_none() {
+        // Empirically verified: `Path::new(".")`, `Path::new("/")`, and
+        // `Path::new("")` all return `None` from `file_name()`.
+        for root in [Path::new("."), Path::new("/"), Path::new("")] {
+            let out = render_tree(&[], root, false);
+            assert_eq!(out, "- Tree Structure\n\n./\n\n", "root = {root:?}");
+
+            let out_human = render_tree(&[], root, true);
+            assert_eq!(out_human, "- Tree Structure\n\n.\n\n", "root = {root:?}");
+        }
+    }
+
+    #[test]
+    fn entry_name_returns_file_name_when_present() {
+        let e = entry("some/dir/file.rs", 2, false);
+        assert_eq!(entry_name(&e), "file.rs");
+    }
+
+    #[test]
+    fn entry_name_returns_empty_string_when_no_file_name() {
+        let e = Entry {
+            path: PathBuf::from("/"),
+            depth: 1,
+            is_dir: false,
+            size: Some(0),
+        };
+        assert_eq!(entry_name(&e), "");
+    }
+}

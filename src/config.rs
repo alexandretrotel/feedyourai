@@ -201,3 +201,484 @@ pub fn merge_config(file: PartialConfig, cli: PartialConfig) -> Config {
         human,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serial_test::serial;
+    use std::io::Write;
+
+    // ---- PartialConfig::from_path ----
+
+    #[test]
+    fn from_path_reads_valid_toml() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("fyai.toml");
+        let mut file = fs::File::create(&path).expect("create");
+        writeln!(
+            file,
+            r#"
+            directory = "src"
+            output = "out.txt"
+            hidden = false
+            include_ext = ["rs", "toml"]
+            min_size = 10
+            "#
+        )
+        .expect("write");
+
+        let config = PartialConfig::from_path(&path).expect("should parse");
+        assert_eq!(config.directory, Some("src".to_string()));
+        assert_eq!(config.output, Some("out.txt".to_string()));
+        assert_eq!(config.hidden, Some(false));
+        assert_eq!(
+            config.include_ext,
+            Some(vec!["rs".to_string(), "toml".to_string()])
+        );
+        assert_eq!(config.min_size, Some(10));
+    }
+
+    #[test]
+    fn from_path_missing_file_returns_read_config_error() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("does-not-exist.toml");
+
+        let err = PartialConfig::from_path(&path).expect_err("should fail");
+        match err {
+            FyaiError::ReadConfig {
+                path: err_path,
+                source: _,
+            } => {
+                assert_eq!(err_path, path);
+            }
+            other => panic!("expected ReadConfig, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn from_path_invalid_toml_returns_parse_config_error() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("fyai.toml");
+        fs::write(&path, "this is not = valid = toml =").expect("write");
+
+        let err = PartialConfig::from_path(&path).expect_err("should fail");
+        match err {
+            FyaiError::ParseConfig {
+                path: err_path,
+                source: _,
+            } => {
+                assert_eq!(err_path, path);
+            }
+            other => panic!("expected ParseConfig, got {other:?}"),
+        }
+    }
+
+    // ---- cwd/env test helpers ----
+
+    /// Restores the process's original working directory on drop, even if
+    /// the test panics, so tests that mutate the cwd don't leak state into
+    /// other tests running in the same process.
+    struct CwdGuard {
+        original: PathBuf,
+    }
+
+    impl CwdGuard {
+        fn new() -> Self {
+            let original = std::env::current_dir().expect("current_dir");
+            Self { original }
+        }
+    }
+
+    impl Drop for CwdGuard {
+        fn drop(&mut self) {
+            let _ = std::env::set_current_dir(&self.original);
+        }
+    }
+
+    /// Restores the original `XDG_CONFIG_HOME` value (set or unset) on drop.
+    struct EnvVarGuard {
+        key: &'static str,
+        original: Option<std::ffi::OsString>,
+    }
+
+    impl EnvVarGuard {
+        fn new(key: &'static str) -> Self {
+            let original = std::env::var_os(key);
+            Self { key, original }
+        }
+    }
+
+    impl Drop for EnvVarGuard {
+        fn drop(&mut self) {
+            match &self.original {
+                Some(val) => unsafe { std::env::set_var(self.key, val) },
+                None => unsafe { std::env::remove_var(self.key) },
+            }
+        }
+    }
+
+    // ---- discover_config_file ----
+
+    #[test]
+    #[serial(env)]
+    fn discover_config_file_returns_none_when_neither_exists() {
+        let _cwd_guard = CwdGuard::new();
+        let _env_guard = EnvVarGuard::new("XDG_CONFIG_HOME");
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::env::set_current_dir(dir.path()).expect("set_current_dir");
+
+        // Point XDG_CONFIG_HOME at an empty directory so the global fallback
+        // also misses.
+        let xdg_dir = tempfile::tempdir().expect("tempdir");
+        unsafe { std::env::set_var("XDG_CONFIG_HOME", xdg_dir.path()) };
+
+        assert_eq!(discover_config_file(), None);
+    }
+
+    #[test]
+    #[serial(env)]
+    fn discover_config_file_finds_local_file() {
+        let _cwd_guard = CwdGuard::new();
+        let _env_guard = EnvVarGuard::new("XDG_CONFIG_HOME");
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::env::set_current_dir(dir.path()).expect("set_current_dir");
+
+        let xdg_dir = tempfile::tempdir().expect("tempdir");
+        unsafe { std::env::set_var("XDG_CONFIG_HOME", xdg_dir.path()) };
+
+        fs::write(dir.path().join("fyai.toml"), "directory = \".\"").expect("write");
+
+        let found = discover_config_file();
+        assert_eq!(found, Some(PathBuf::from("./fyai.toml")));
+    }
+
+    #[test]
+    #[serial(env)]
+    fn discover_config_file_falls_back_to_system_dir_when_local_absent() {
+        let _cwd_guard = CwdGuard::new();
+        let _env_guard = EnvVarGuard::new("XDG_CONFIG_HOME");
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::env::set_current_dir(dir.path()).expect("set_current_dir");
+
+        let xdg_dir = tempfile::tempdir().expect("tempdir");
+        unsafe { std::env::set_var("XDG_CONFIG_HOME", xdg_dir.path()) };
+        fs::write(xdg_dir.path().join("fyai.toml"), "directory = \".\"").expect("write");
+
+        let found = discover_config_file();
+        assert_eq!(found, Some(xdg_dir.path().join("fyai.toml")));
+    }
+
+    // ---- system_config_dir ----
+
+    #[test]
+    #[serial(env)]
+    fn system_config_dir_uses_absolute_xdg_config_home() {
+        let _env_guard = EnvVarGuard::new("XDG_CONFIG_HOME");
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        unsafe { std::env::set_var("XDG_CONFIG_HOME", dir.path()) };
+
+        assert_eq!(system_config_dir(), Some(dir.path().to_path_buf()));
+    }
+
+    #[test]
+    #[serial(env)]
+    fn system_config_dir_ignores_relative_xdg_config_home() {
+        let _env_guard = EnvVarGuard::new("XDG_CONFIG_HOME");
+
+        unsafe { std::env::set_var("XDG_CONFIG_HOME", "relative/path") };
+
+        assert_eq!(system_config_dir(), dirs::config_dir());
+    }
+
+    #[test]
+    #[serial(env)]
+    fn system_config_dir_falls_back_when_unset() {
+        let _env_guard = EnvVarGuard::new("XDG_CONFIG_HOME");
+
+        unsafe { std::env::remove_var("XDG_CONFIG_HOME") };
+
+        assert_eq!(system_config_dir(), dirs::config_dir());
+    }
+
+    // ---- merge_config ----
+
+    fn empty_partial() -> PartialConfig {
+        PartialConfig::default()
+    }
+
+    #[test]
+    fn merge_config_all_defaults_when_nothing_set() {
+        let config = merge_config(empty_partial(), empty_partial());
+        assert_eq!(config.directory, PathBuf::from("."));
+        assert_eq!(config.output, PathBuf::from("fyai.txt"));
+        assert_eq!(config.include_dirs, None);
+        assert_eq!(config.exclude_dirs, None);
+        assert_eq!(config.include_ext, None);
+        assert_eq!(config.exclude_ext, None);
+        assert_eq!(config.include_files, None);
+        assert_eq!(config.exclude_files, None);
+        assert_eq!(config.min_size, None);
+        assert_eq!(config.max_size, None);
+        assert!(config.hidden);
+        assert!(config.gitignore);
+        assert!(config.ignore_files);
+        assert!(config.git_global);
+        assert!(!config.follow_links);
+        assert!(!config.tree_only);
+        assert!(!config.human);
+    }
+
+    #[test]
+    fn merge_config_directory_cli_wins_over_file() {
+        let file = PartialConfig {
+            directory: Some("from-file".to_string()),
+            ..empty_partial()
+        };
+        let cli = PartialConfig {
+            directory: Some("from-cli".to_string()),
+            ..empty_partial()
+        };
+        let config = merge_config(file, cli);
+        assert_eq!(config.directory, PathBuf::from("from-cli"));
+    }
+
+    #[test]
+    fn merge_config_directory_file_wins_when_cli_unset() {
+        let file = PartialConfig {
+            directory: Some("from-file".to_string()),
+            ..empty_partial()
+        };
+        let config = merge_config(file, empty_partial());
+        assert_eq!(config.directory, PathBuf::from("from-file"));
+    }
+
+    #[test]
+    fn merge_config_output_cli_wins_over_file() {
+        let file = PartialConfig {
+            output: Some("file-out.txt".to_string()),
+            ..empty_partial()
+        };
+        let cli = PartialConfig {
+            output: Some("cli-out.txt".to_string()),
+            ..empty_partial()
+        };
+        let config = merge_config(file, cli);
+        assert_eq!(config.output, PathBuf::from("cli-out.txt"));
+    }
+
+    #[test]
+    fn merge_config_output_file_wins_when_cli_unset() {
+        let file = PartialConfig {
+            output: Some("file-out.txt".to_string()),
+            ..empty_partial()
+        };
+        let config = merge_config(file, empty_partial());
+        assert_eq!(config.output, PathBuf::from("file-out.txt"));
+    }
+
+    macro_rules! bool_field_tests {
+        ($field:ident, $default:expr, $cli_wins:ident, $file_wins:ident, $default_test:ident) => {
+            #[test]
+            fn $cli_wins() {
+                let file = PartialConfig {
+                    $field: Some(!$default),
+                    ..empty_partial()
+                };
+                let cli = PartialConfig {
+                    $field: Some($default),
+                    ..empty_partial()
+                };
+                let config = merge_config(file, cli);
+                assert_eq!(config.$field, $default);
+            }
+
+            #[test]
+            fn $file_wins() {
+                let file = PartialConfig {
+                    $field: Some(!$default),
+                    ..empty_partial()
+                };
+                let config = merge_config(file, empty_partial());
+                assert_eq!(config.$field, !$default);
+            }
+
+            #[test]
+            fn $default_test() {
+                let config = merge_config(empty_partial(), empty_partial());
+                assert_eq!(config.$field, $default);
+            }
+        };
+    }
+
+    bool_field_tests!(
+        hidden,
+        true,
+        merge_config_hidden_cli_wins,
+        merge_config_hidden_file_wins,
+        merge_config_hidden_default
+    );
+    bool_field_tests!(
+        gitignore,
+        true,
+        merge_config_gitignore_cli_wins,
+        merge_config_gitignore_file_wins,
+        merge_config_gitignore_default
+    );
+    bool_field_tests!(
+        ignore_files,
+        true,
+        merge_config_ignore_files_cli_wins,
+        merge_config_ignore_files_file_wins,
+        merge_config_ignore_files_default
+    );
+    bool_field_tests!(
+        git_global,
+        true,
+        merge_config_git_global_cli_wins,
+        merge_config_git_global_file_wins,
+        merge_config_git_global_default
+    );
+    bool_field_tests!(
+        follow_links,
+        false,
+        merge_config_follow_links_cli_wins,
+        merge_config_follow_links_file_wins,
+        merge_config_follow_links_default
+    );
+    bool_field_tests!(
+        tree_only,
+        false,
+        merge_config_tree_only_cli_wins,
+        merge_config_tree_only_file_wins,
+        merge_config_tree_only_default
+    );
+    bool_field_tests!(
+        human,
+        false,
+        merge_config_human_cli_wins,
+        merge_config_human_file_wins,
+        merge_config_human_default
+    );
+
+    macro_rules! vec_field_tests {
+        ($field:ident, $cli_wins:ident, $file_wins:ident, $default_test:ident) => {
+            #[test]
+            fn $cli_wins() {
+                let file = PartialConfig {
+                    $field: Some(vec!["file-value".to_string()]),
+                    ..empty_partial()
+                };
+                let cli = PartialConfig {
+                    $field: Some(vec!["cli-value".to_string()]),
+                    ..empty_partial()
+                };
+                let config = merge_config(file, cli);
+                assert_eq!(config.$field, Some(vec!["cli-value".to_string()]));
+            }
+
+            #[test]
+            fn $file_wins() {
+                let file = PartialConfig {
+                    $field: Some(vec!["file-value".to_string()]),
+                    ..empty_partial()
+                };
+                let config = merge_config(file, empty_partial());
+                assert_eq!(config.$field, Some(vec!["file-value".to_string()]));
+            }
+
+            #[test]
+            fn $default_test() {
+                let config = merge_config(empty_partial(), empty_partial());
+                assert_eq!(config.$field, None);
+            }
+        };
+    }
+
+    vec_field_tests!(
+        include_dirs,
+        merge_config_include_dirs_cli_wins,
+        merge_config_include_dirs_file_wins,
+        merge_config_include_dirs_default
+    );
+    vec_field_tests!(
+        exclude_dirs,
+        merge_config_exclude_dirs_cli_wins,
+        merge_config_exclude_dirs_file_wins,
+        merge_config_exclude_dirs_default
+    );
+    vec_field_tests!(
+        include_ext,
+        merge_config_include_ext_cli_wins,
+        merge_config_include_ext_file_wins,
+        merge_config_include_ext_default
+    );
+    vec_field_tests!(
+        exclude_ext,
+        merge_config_exclude_ext_cli_wins,
+        merge_config_exclude_ext_file_wins,
+        merge_config_exclude_ext_default
+    );
+    vec_field_tests!(
+        include_files,
+        merge_config_include_files_cli_wins,
+        merge_config_include_files_file_wins,
+        merge_config_include_files_default
+    );
+    vec_field_tests!(
+        exclude_files,
+        merge_config_exclude_files_cli_wins,
+        merge_config_exclude_files_file_wins,
+        merge_config_exclude_files_default
+    );
+
+    macro_rules! u64_field_tests {
+        ($field:ident, $cli_wins:ident, $file_wins:ident, $default_test:ident) => {
+            #[test]
+            fn $cli_wins() {
+                let file = PartialConfig {
+                    $field: Some(100),
+                    ..empty_partial()
+                };
+                let cli = PartialConfig {
+                    $field: Some(200),
+                    ..empty_partial()
+                };
+                let config = merge_config(file, cli);
+                assert_eq!(config.$field, Some(200));
+            }
+
+            #[test]
+            fn $file_wins() {
+                let file = PartialConfig {
+                    $field: Some(100),
+                    ..empty_partial()
+                };
+                let config = merge_config(file, empty_partial());
+                assert_eq!(config.$field, Some(100));
+            }
+
+            #[test]
+            fn $default_test() {
+                let config = merge_config(empty_partial(), empty_partial());
+                assert_eq!(config.$field, None);
+            }
+        };
+    }
+
+    u64_field_tests!(
+        min_size,
+        merge_config_min_size_cli_wins,
+        merge_config_min_size_file_wins,
+        merge_config_min_size_default
+    );
+    u64_field_tests!(
+        max_size,
+        merge_config_max_size_cli_wins,
+        merge_config_max_size_file_wins,
+        merge_config_max_size_default
+    );
+}

@@ -124,3 +124,378 @@ fn command_error_details(output: &process::Output) -> String {
         details.to_string()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::path::Path;
+
+    // ---- test helpers ----
+
+    /// Builds a minimal [`Config`] pointing at `directory`/`output`, with
+    /// every optional filter unset and all booleans at their usual default.
+    fn test_config(directory: PathBuf, output: PathBuf) -> Config {
+        Config {
+            directory,
+            output,
+            include_dirs: None,
+            exclude_dirs: None,
+            include_ext: None,
+            exclude_ext: None,
+            include_files: None,
+            exclude_files: None,
+            min_size: None,
+            max_size: None,
+            hidden: true,
+            gitignore: true,
+            ignore_files: true,
+            git_global: true,
+            follow_links: false,
+            tree_only: false,
+            human: false,
+        }
+    }
+
+    /// Runs `git <args>` with `-C repo_path`, asserting it succeeds, and
+    /// returns its stdout as a `String` (trimmed).
+    fn run_git_cmd(repo_path: &Path, args: &[&str]) -> String {
+        let output = Command::new("git")
+            .arg("-C")
+            .arg(repo_path)
+            .args(args)
+            .output()
+            .unwrap_or_else(|e| panic!("failed to run git {args:?}: {e}"));
+        assert!(
+            output.status.success(),
+            "git {args:?} failed: stdout={} stderr={}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr),
+        );
+        String::from_utf8_lossy(&output.stdout).trim().to_string()
+    }
+
+    /// Initializes a fresh git repo in a new tempdir with a single commit
+    /// containing `file1.txt`. Returns the `TempDir` guard (keep it alive
+    /// for as long as the repo path is needed).
+    fn init_git_repo() -> TempDir {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path();
+
+        run_git_cmd(path, &["init", "-q"]);
+        fs::write(path.join("file1.txt"), "hello from file1").expect("write file1");
+        run_git_cmd(path, &["add", "."]);
+        run_git_cmd(
+            path,
+            &[
+                "-c",
+                "user.email=test@test.com",
+                "-c",
+                "user.name=Test",
+                "commit",
+                "-q",
+                "-m",
+                "initial commit",
+            ],
+        );
+
+        dir
+    }
+
+    fn read_output(path: &Path) -> String {
+        fs::read_to_string(path).expect("read output file")
+    }
+
+    // ---- run_local ----
+
+    #[test]
+    fn run_local_writes_combined_output_successfully() {
+        let source_dir = tempfile::tempdir().expect("tempdir");
+        fs::write(source_dir.path().join("a.txt"), "content of a").expect("write a.txt");
+        fs::write(source_dir.path().join("b.txt"), "content of b").expect("write b.txt");
+
+        let out_dir = tempfile::tempdir().expect("tempdir");
+        let output_path = out_dir.path().join("combined.txt");
+
+        let config = test_config(source_dir.path().to_path_buf(), output_path.clone());
+
+        let result = run_local(config);
+        assert!(result.is_ok(), "expected Ok, got {result:?}");
+
+        let contents = read_output(&output_path);
+        assert!(!contents.is_empty());
+        assert!(contents.contains("a.txt"));
+        assert!(contents.contains("b.txt"));
+        assert!(contents.contains("content of a"));
+        assert!(contents.contains("content of b"));
+    }
+
+    #[test]
+    fn run_local_handles_empty_directory() {
+        let source_dir = tempfile::tempdir().expect("tempdir");
+        let out_dir = tempfile::tempdir().expect("tempdir");
+        let output_path = out_dir.path().join("combined.txt");
+
+        let config = test_config(source_dir.path().to_path_buf(), output_path.clone());
+
+        let result = run_local(config);
+        assert!(result.is_ok(), "expected Ok, got {result:?}");
+
+        let contents = read_output(&output_path);
+        assert!(contents.contains("The directory is empty."));
+    }
+
+    #[test]
+    fn run_local_propagates_io_error_from_scan() {
+        let source_dir = tempfile::tempdir().expect("tempdir");
+        fs::write(source_dir.path().join("a.txt"), "content").expect("write a.txt");
+
+        // Parent directory of the output path does not exist, so
+        // `File::create` inside `scan` fails.
+        let out_dir = tempfile::tempdir().expect("tempdir");
+        let output_path = out_dir.path().join("missing-subdir").join("combined.txt");
+
+        let config = test_config(source_dir.path().to_path_buf(), output_path);
+
+        let result = run_local(config);
+        assert!(matches!(result, Err(FyaiError::Io(_))));
+    }
+
+    // ---- run_git: success paths ----
+
+    #[test]
+    fn run_git_clones_and_scans_default_branch() {
+        let repo_dir = init_git_repo();
+        let repo_path = repo_dir.path().to_str().expect("utf8 path").to_string();
+
+        let out_dir = tempfile::tempdir().expect("tempdir");
+        let output_path = out_dir.path().join("combined.txt");
+        let placeholder_dir = tempfile::tempdir().expect("tempdir");
+
+        let config = test_config(placeholder_dir.path().to_path_buf(), output_path.clone());
+
+        let result = run_git(&repo_path, None, None, config);
+        assert!(result.is_ok(), "expected Ok, got {result:?}");
+
+        let contents = read_output(&output_path);
+        assert!(contents.contains("file1.txt"));
+        assert!(contents.contains("hello from file1"));
+
+        // The test's own tempdirs are untouched/still present; the clone's
+        // temp directory (internal to `run_git`) has been cleaned up, which
+        // we can't observe directly, but the call returning successfully
+        // without leaking into our fixtures is the externally-visible
+        // guarantee.
+        assert!(out_dir.path().exists());
+        assert!(repo_dir.path().exists());
+    }
+
+    #[test]
+    fn run_git_with_branch_checks_out_branch_content() {
+        let repo_dir = init_git_repo();
+        let repo_path = repo_dir.path();
+
+        run_git_cmd(repo_path, &["checkout", "-q", "-b", "my-branch"]);
+        fs::write(repo_path.join("branch_only.txt"), "only on my-branch")
+            .expect("write branch_only.txt");
+        run_git_cmd(repo_path, &["add", "."]);
+        run_git_cmd(
+            repo_path,
+            &[
+                "-c",
+                "user.email=test@test.com",
+                "-c",
+                "user.name=Test",
+                "commit",
+                "-q",
+                "-m",
+                "branch-only commit",
+            ],
+        );
+
+        let repo_url = repo_path.to_str().expect("utf8 path").to_string();
+        let out_dir = tempfile::tempdir().expect("tempdir");
+        let output_path = out_dir.path().join("combined.txt");
+        let placeholder_dir = tempfile::tempdir().expect("tempdir");
+        let config = test_config(placeholder_dir.path().to_path_buf(), output_path.clone());
+
+        let result = run_git(&repo_url, Some("my-branch"), None, config);
+        assert!(result.is_ok(), "expected Ok, got {result:?}");
+
+        let contents = read_output(&output_path);
+        assert!(contents.contains("branch_only.txt"));
+        assert!(contents.contains("only on my-branch"));
+        // The original file, present on every branch, should still show up.
+        assert!(contents.contains("file1.txt"));
+    }
+
+    #[test]
+    fn run_git_with_commit_pins_to_specific_commit() {
+        let repo_dir = init_git_repo();
+        let repo_path = repo_dir.path();
+
+        let first_sha = run_git_cmd(repo_path, &["rev-parse", "HEAD"]);
+
+        fs::write(repo_path.join("second.txt"), "added after first commit")
+            .expect("write second.txt");
+        run_git_cmd(repo_path, &["add", "."]);
+        run_git_cmd(
+            repo_path,
+            &[
+                "-c",
+                "user.email=test@test.com",
+                "-c",
+                "user.name=Test",
+                "commit",
+                "-q",
+                "-m",
+                "second commit",
+            ],
+        );
+
+        let repo_url = repo_path.to_str().expect("utf8 path").to_string();
+        let out_dir = tempfile::tempdir().expect("tempdir");
+        let output_path = out_dir.path().join("combined.txt");
+        let placeholder_dir = tempfile::tempdir().expect("tempdir");
+        let config = test_config(placeholder_dir.path().to_path_buf(), output_path.clone());
+
+        let result = run_git(&repo_url, None, Some(&first_sha), config);
+        assert!(result.is_ok(), "expected Ok, got {result:?}");
+
+        let contents = read_output(&output_path);
+        assert!(contents.contains("file1.txt"));
+        assert!(
+            !contents.contains("second.txt"),
+            "output should not contain the file added in the second commit, got:\n{contents}"
+        );
+    }
+
+    // ---- run_git: failure paths ----
+
+    #[test]
+    fn run_git_invalid_repo_url_returns_git_error() {
+        let out_dir = tempfile::tempdir().expect("tempdir");
+        let output_path = out_dir.path().join("combined.txt");
+        let placeholder_dir = tempfile::tempdir().expect("tempdir");
+        let config = test_config(placeholder_dir.path().to_path_buf(), output_path);
+
+        let result = run_git(
+            "/nonexistent/path/that/does/not/exist",
+            None,
+            None,
+            config,
+        );
+
+        match result {
+            Err(FyaiError::Git(msg)) => {
+                assert!(
+                    msg.contains("git clone failed"),
+                    "unexpected message: {msg}"
+                );
+            }
+            other => panic!("expected Err(FyaiError::Git(_)), got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn run_git_invalid_commit_returns_git_error() {
+        let repo_dir = init_git_repo();
+        let repo_path = repo_dir.path().to_str().expect("utf8 path").to_string();
+
+        let out_dir = tempfile::tempdir().expect("tempdir");
+        let output_path = out_dir.path().join("combined.txt");
+        let placeholder_dir = tempfile::tempdir().expect("tempdir");
+        let config = test_config(placeholder_dir.path().to_path_buf(), output_path);
+
+        let bogus_sha = "0".repeat(40);
+        let result = run_git(&repo_path, None, Some(&bogus_sha), config);
+
+        match result {
+            Err(FyaiError::Git(msg)) => {
+                assert!(
+                    msg.contains("git checkout failed"),
+                    "unexpected message: {msg}"
+                );
+            }
+            other => panic!("expected Err(FyaiError::Git(_)), got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn run_git_propagates_scan_io_error() {
+        let repo_dir = init_git_repo();
+        let repo_path = repo_dir.path().to_str().expect("utf8 path").to_string();
+
+        // Parent directory of the output path does not exist, so the
+        // `run_local` call inside `run_git` fails with an I/O error.
+        let out_dir = tempfile::tempdir().expect("tempdir");
+        let output_path = out_dir.path().join("missing-subdir").join("combined.txt");
+        let placeholder_dir = tempfile::tempdir().expect("tempdir");
+        let config = test_config(placeholder_dir.path().to_path_buf(), output_path);
+
+        let result = run_git(&repo_path, None, None, config);
+        assert!(matches!(result, Err(FyaiError::Io(_))));
+    }
+
+    // ---- command_error_details ----
+
+    /// Returns a real `ExitStatus` representing a failed process, so tests
+    /// can build a custom `Output` around it (`ExitStatus` has no public
+    /// constructor).
+    fn failing_status() -> process::ExitStatus {
+        Command::new("false")
+            .output()
+            .expect("failed to run `false`")
+            .status
+    }
+
+    #[test]
+    fn command_error_details_prefers_stderr_over_stdout() {
+        let output = process::Output {
+            status: failing_status(),
+            stdout: b"stdout message".to_vec(),
+            stderr: b"stderr message".to_vec(),
+        };
+        assert_eq!(command_error_details(&output), "stderr message");
+    }
+
+    #[test]
+    fn command_error_details_falls_back_to_stdout_when_stderr_empty() {
+        let output = process::Output {
+            status: failing_status(),
+            stdout: b"stdout message".to_vec(),
+            stderr: Vec::new(),
+        };
+        assert_eq!(command_error_details(&output), "stdout message");
+    }
+
+    #[test]
+    fn command_error_details_falls_back_to_stdout_when_stderr_whitespace_only() {
+        let output = process::Output {
+            status: failing_status(),
+            stdout: b"stdout message".to_vec(),
+            stderr: b"   \n\t  ".to_vec(),
+        };
+        assert_eq!(command_error_details(&output), "stdout message");
+    }
+
+    #[test]
+    fn command_error_details_returns_unknown_error_when_both_empty() {
+        let output = process::Output {
+            status: failing_status(),
+            stdout: Vec::new(),
+            stderr: Vec::new(),
+        };
+        assert_eq!(command_error_details(&output), "unknown error");
+    }
+
+    #[test]
+    fn command_error_details_returns_unknown_error_when_both_whitespace_only() {
+        let output = process::Output {
+            status: failing_status(),
+            stdout: b"  \n  ".to_vec(),
+            stderr: b"\t\t".to_vec(),
+        };
+        assert_eq!(command_error_details(&output), "unknown error");
+    }
+}

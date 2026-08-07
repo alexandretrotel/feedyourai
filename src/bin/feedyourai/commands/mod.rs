@@ -354,3 +354,552 @@ fn explicit_flag(matches: &clap::ArgMatches, id: &str) -> Option<bool> {
     }
     Some(matches.get_flag(id))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::{CommandFactory, FromArgMatches};
+
+    /// Parses `argv` (with a fake `fyai` program name automatically
+    /// prepended by the caller) through the real [`Cli`] struct.
+    fn parse(argv: &[&str]) -> clap::error::Result<clap::ArgMatches> {
+        Cli::command().try_get_matches_from(argv)
+    }
+
+    fn parse_ok(argv: &[&str]) -> clap::ArgMatches {
+        parse(argv).unwrap_or_else(|e| panic!("expected parse to succeed: {e}"))
+    }
+
+    // ---- input / output ----------------------------------------------
+
+    #[test]
+    fn input_explicit_is_some() {
+        let matches = parse_ok(&["fyai", "--input", "somedir"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.directory, Some("somedir".to_string()));
+    }
+
+    #[test]
+    fn input_short_flag_is_some() {
+        let matches = parse_ok(&["fyai", "-i", "somedir"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.directory, Some("somedir".to_string()));
+    }
+
+    #[test]
+    fn input_not_passed_is_none() {
+        let matches = parse_ok(&["fyai"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.directory, None);
+    }
+
+    #[test]
+    fn output_explicit_is_some() {
+        let matches = parse_ok(&["fyai", "--output", "out.txt"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.output, Some("out.txt".to_string()));
+    }
+
+    #[test]
+    fn output_short_flag_is_some() {
+        let matches = parse_ok(&["fyai", "-o", "out.txt"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.output, Some("out.txt".to_string()));
+    }
+
+    #[test]
+    fn output_not_passed_is_none() {
+        let matches = parse_ok(&["fyai"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.output, None);
+    }
+
+    // ---- comma-separated list options ---------------------------------
+
+    #[test]
+    fn include_dirs_parses_trims_lowercases_and_drops_empty() {
+        let matches = parse_ok(&["fyai", "--include-dirs", "a,b, c ,,d"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(
+            config.include_dirs,
+            Some(vec![
+                "a".to_string(),
+                "b".to_string(),
+                "c".to_string(),
+                "d".to_string(),
+            ])
+        );
+    }
+
+    #[test]
+    fn include_dirs_mixed_case_and_blank_entries() {
+        let matches = parse_ok(&["fyai", "--include-dirs", "Src, ,Test,"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(
+            config.include_dirs,
+            Some(vec!["src".to_string(), "test".to_string()])
+        );
+    }
+
+    #[test]
+    fn include_dirs_not_passed_is_none() {
+        let matches = parse_ok(&["fyai"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.include_dirs, None);
+    }
+
+    #[test]
+    fn exclude_dirs_parses_and_defaults_to_none() {
+        let matches = parse_ok(&["fyai", "--exclude-dirs", "node_modules, TARGET ,,"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(
+            config.exclude_dirs,
+            Some(vec!["node_modules".to_string(), "target".to_string()])
+        );
+
+        let matches = parse_ok(&["fyai"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.exclude_dirs, None);
+    }
+
+    #[test]
+    fn include_ext_parses_and_defaults_to_none() {
+        let matches = parse_ok(&["fyai", "--include-ext", ".JSON, .toml ,,"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(
+            config.include_ext,
+            Some(vec![".json".to_string(), ".toml".to_string()])
+        );
+
+        let matches = parse_ok(&["fyai"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.include_ext, None);
+    }
+
+    #[test]
+    fn exclude_ext_parses_and_defaults_to_none() {
+        let matches = parse_ok(&["fyai", "--exclude-ext", ".LOCK, .bak ,,"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(
+            config.exclude_ext,
+            Some(vec![".lock".to_string(), ".bak".to_string()])
+        );
+
+        let matches = parse_ok(&["fyai"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.exclude_ext, None);
+    }
+
+    #[test]
+    fn include_files_parses_and_defaults_to_none() {
+        let matches = parse_ok(&["fyai", "--include-files", "README.md, Main.rs ,,"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(
+            config.include_files,
+            Some(vec!["readme.md".to_string(), "main.rs".to_string()])
+        );
+
+        let matches = parse_ok(&["fyai"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.include_files, None);
+    }
+
+    #[test]
+    fn exclude_files_parses_and_defaults_to_none() {
+        let matches = parse_ok(&["fyai", "--exclude-files", "LICENSE, Config.json ,,"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(
+            config.exclude_files,
+            Some(vec!["license".to_string(), "config.json".to_string()])
+        );
+
+        let matches = parse_ok(&["fyai"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.exclude_files, None);
+    }
+
+    // ---- min-size / max-size ------------------------------------------
+
+    #[test]
+    fn min_size_explicit_is_some() {
+        let matches = parse_ok(&["fyai", "--min-size", "1024"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.min_size, Some(1024));
+    }
+
+    #[test]
+    fn min_size_short_flag_is_some() {
+        let matches = parse_ok(&["fyai", "-n", "512"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.min_size, Some(512));
+    }
+
+    #[test]
+    fn min_size_not_passed_is_none() {
+        let matches = parse_ok(&["fyai"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.min_size, None);
+    }
+
+    #[test]
+    fn max_size_explicit_is_some() {
+        let matches = parse_ok(&["fyai", "--max-size", "2048"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.max_size, Some(2048));
+    }
+
+    #[test]
+    fn max_size_short_flag_is_some() {
+        let matches = parse_ok(&["fyai", "-m", "4096"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.max_size, Some(4096));
+    }
+
+    #[test]
+    fn max_size_not_passed_is_none() {
+        let matches = parse_ok(&["fyai"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.max_size, None);
+    }
+
+    #[test]
+    fn min_size_invalid_value_is_rejected_by_clap() {
+        // clap validates the `u64` value type itself before
+        // `config_from_matches` ever runs, so a non-numeric value never
+        // reaches the string-parse fallback branch in `config_from_matches`.
+        let result = parse(&["fyai", "--min-size", "not-a-number"]);
+        assert!(result.is_err());
+    }
+
+    // ---- negated boolean flags -----------------------------------------
+
+    #[test]
+    fn no_hidden_flag_negates_to_some_false() {
+        let matches = parse_ok(&["fyai", "--no-hidden"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.hidden, Some(false));
+    }
+
+    #[test]
+    fn no_hidden_not_passed_is_none() {
+        let matches = parse_ok(&["fyai"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.hidden, None);
+    }
+
+    #[test]
+    fn no_gitignore_flag_negates_to_some_false() {
+        let matches = parse_ok(&["fyai", "--no-gitignore"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.gitignore, Some(false));
+    }
+
+    #[test]
+    fn no_gitignore_not_passed_is_none() {
+        let matches = parse_ok(&["fyai"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.gitignore, None);
+    }
+
+    #[test]
+    fn no_ignore_files_flag_negates_to_some_false() {
+        let matches = parse_ok(&["fyai", "--no-ignore-files"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.ignore_files, Some(false));
+    }
+
+    #[test]
+    fn no_ignore_files_not_passed_is_none() {
+        let matches = parse_ok(&["fyai"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.ignore_files, None);
+    }
+
+    #[test]
+    fn no_git_global_flag_negates_to_some_false() {
+        let matches = parse_ok(&["fyai", "--no-git-global"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.git_global, Some(false));
+    }
+
+    #[test]
+    fn no_git_global_not_passed_is_none() {
+        let matches = parse_ok(&["fyai"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.git_global, None);
+    }
+
+    // ---- direct (non-negated) boolean flags -----------------------------
+
+    #[test]
+    fn follow_links_flag_is_some_true() {
+        let matches = parse_ok(&["fyai", "--follow-links"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.follow_links, Some(true));
+    }
+
+    #[test]
+    fn follow_links_not_passed_is_none() {
+        let matches = parse_ok(&["fyai"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.follow_links, None);
+    }
+
+    #[test]
+    fn tree_only_flag_is_some_true() {
+        let matches = parse_ok(&["fyai", "--tree-only"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.tree_only, Some(true));
+    }
+
+    #[test]
+    fn tree_only_not_passed_is_none() {
+        let matches = parse_ok(&["fyai"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.tree_only, None);
+    }
+
+    #[test]
+    fn human_flag_is_some_true() {
+        let matches = parse_ok(&["fyai", "--human"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.human, Some(true));
+    }
+
+    #[test]
+    fn human_not_passed_is_none() {
+        let matches = parse_ok(&["fyai"]);
+        let config = config_from_matches(matches).unwrap();
+        assert_eq!(config.human, None);
+    }
+
+    // ---- --repo conflicts / requires ------------------------------------
+
+    #[test]
+    fn repo_conflicts_with_input() {
+        let result = parse(&["fyai", "--repo", "https://example.com/x.git", "--input", "y"]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn repo_alone_parses_fine() {
+        let matches = parse_ok(&["fyai", "--repo", "https://example.com/x.git"]);
+        let cli = Cli::from_arg_matches(&matches).unwrap();
+        assert_eq!(cli.repo, Some("https://example.com/x.git".to_string()));
+    }
+
+    #[test]
+    fn repo_branch_requires_repo() {
+        let result = parse(&["fyai", "--repo-branch", "main"]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn repo_branch_with_repo_parses_fine() {
+        let matches = parse_ok(&[
+            "fyai",
+            "--repo",
+            "https://example.com/x.git",
+            "--repo-branch",
+            "main",
+        ]);
+        let cli = Cli::from_arg_matches(&matches).unwrap();
+        assert_eq!(cli.repo_branch, Some("main".to_string()));
+    }
+
+    #[test]
+    fn repo_commit_requires_repo() {
+        let result = parse(&["fyai", "--repo-commit", "deadbeef"]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn repo_commit_with_repo_parses_fine() {
+        let matches = parse_ok(&[
+            "fyai",
+            "--repo",
+            "https://example.com/x.git",
+            "--repo-commit",
+            "deadbeef",
+        ]);
+        let cli = Cli::from_arg_matches(&matches).unwrap();
+        assert_eq!(cli.repo_commit, Some("deadbeef".to_string()));
+    }
+
+    // ---- init subcommand -------------------------------------------------
+
+    #[test]
+    fn init_subcommand_defaults_false() {
+        let matches = parse_ok(&["fyai", "init"]);
+        let cli = Cli::from_arg_matches(&matches).unwrap();
+        match cli.command {
+            Some(Command::Init { global, force }) => {
+                assert!(!global);
+                assert!(!force);
+            }
+            other => panic!("expected Some(Command::Init {{ .. }}), got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn init_subcommand_with_flags() {
+        let matches = parse_ok(&["fyai", "init", "--global", "--force"]);
+        let cli = Cli::from_arg_matches(&matches).unwrap();
+        match cli.command {
+            Some(Command::Init { global, force }) => {
+                assert!(global);
+                assert!(force);
+            }
+            other => panic!("expected Some(Command::Init {{ .. }}), got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn no_subcommand_is_none() {
+        let matches = parse_ok(&["fyai"]);
+        let cli = Cli::from_arg_matches(&matches).unwrap();
+        assert!(cli.command.is_none());
+    }
+
+    // ---- test flag ---------------------------------------------------------
+
+    #[test]
+    fn test_flag_true_when_passed() {
+        let matches = parse_ok(&["fyai", "-t"]);
+        let cli = Cli::from_arg_matches(&matches).unwrap();
+        assert!(cli.test);
+
+        let matches = parse_ok(&["fyai", "--test"]);
+        let cli = Cli::from_arg_matches(&matches).unwrap();
+        assert!(cli.test);
+    }
+
+    #[test]
+    fn test_flag_false_when_not_passed() {
+        let matches = parse_ok(&["fyai"]);
+        let cli = Cli::from_arg_matches(&matches).unwrap();
+        assert!(!cli.test);
+    }
+
+    // ---- explicit_string / explicit_flag helpers (direct) -----------------
+
+    #[test]
+    fn explicit_string_ignores_default_value() {
+        // `--input` has a clap `default_value`, so when omitted, `get_one`
+        // would return `Some(".")`, but `explicit_string` must still report
+        // `None` because it wasn't passed on the command line.
+        let matches = parse_ok(&["fyai"]);
+        assert_eq!(explicit_string(&matches, "input"), None);
+        assert_eq!(
+            matches.get_one::<String>("input").map(String::as_str),
+            Some(".")
+        );
+    }
+
+    #[test]
+    fn explicit_string_returns_value_when_passed() {
+        let matches = parse_ok(&["fyai", "--input", "somedir"]);
+        assert_eq!(explicit_string(&matches, "input"), Some("somedir".to_string()));
+    }
+
+    #[test]
+    fn explicit_flag_none_when_not_passed() {
+        let matches = parse_ok(&["fyai"]);
+        assert_eq!(explicit_flag(&matches, "no_hidden"), None);
+    }
+
+    #[test]
+    fn explicit_flag_some_true_when_passed() {
+        let matches = parse_ok(&["fyai", "--no-hidden"]);
+        assert_eq!(explicit_flag(&matches, "no_hidden"), Some(true));
+    }
+
+    // ---- full end-to-end sanity check -------------------------------------
+
+    #[test]
+    fn all_fields_together() {
+        let matches = parse_ok(&[
+            "fyai",
+            "--input",
+            "src",
+            "--output",
+            "out.txt",
+            "--include-dirs",
+            "a,b",
+            "--exclude-dirs",
+            "c,d",
+            "--include-ext",
+            ".rs,.toml",
+            "--exclude-ext",
+            ".lock",
+            "--include-files",
+            "main.rs",
+            "--exclude-files",
+            "LICENSE",
+            "--min-size",
+            "10",
+            "--max-size",
+            "20",
+            "--no-hidden",
+            "--no-gitignore",
+            "--no-ignore-files",
+            "--no-git-global",
+            "--follow-links",
+            "--tree-only",
+            "--human",
+            "-t",
+        ]);
+        let config = config_from_matches(matches).unwrap();
+
+        assert_eq!(config.directory, Some("src".to_string()));
+        assert_eq!(config.output, Some("out.txt".to_string()));
+        assert_eq!(
+            config.include_dirs,
+            Some(vec!["a".to_string(), "b".to_string()])
+        );
+        assert_eq!(
+            config.exclude_dirs,
+            Some(vec!["c".to_string(), "d".to_string()])
+        );
+        assert_eq!(
+            config.include_ext,
+            Some(vec![".rs".to_string(), ".toml".to_string()])
+        );
+        assert_eq!(config.exclude_ext, Some(vec![".lock".to_string()]));
+        assert_eq!(config.include_files, Some(vec!["main.rs".to_string()]));
+        assert_eq!(config.exclude_files, Some(vec!["license".to_string()]));
+        assert_eq!(config.min_size, Some(10));
+        assert_eq!(config.max_size, Some(20));
+        assert_eq!(config.hidden, Some(false));
+        assert_eq!(config.gitignore, Some(false));
+        assert_eq!(config.ignore_files, Some(false));
+        assert_eq!(config.git_global, Some(false));
+        assert_eq!(config.follow_links, Some(true));
+        assert_eq!(config.tree_only, Some(true));
+        assert_eq!(config.human, Some(true));
+    }
+
+    #[test]
+    fn no_flags_all_none() {
+        let matches = parse_ok(&["fyai"]);
+        let config = config_from_matches(matches).unwrap();
+
+        assert_eq!(config.directory, None);
+        assert_eq!(config.output, None);
+        assert_eq!(config.include_dirs, None);
+        assert_eq!(config.exclude_dirs, None);
+        assert_eq!(config.include_ext, None);
+        assert_eq!(config.exclude_ext, None);
+        assert_eq!(config.include_files, None);
+        assert_eq!(config.exclude_files, None);
+        assert_eq!(config.min_size, None);
+        assert_eq!(config.max_size, None);
+        assert_eq!(config.hidden, None);
+        assert_eq!(config.gitignore, None);
+        assert_eq!(config.ignore_files, None);
+        assert_eq!(config.git_global, None);
+        assert_eq!(config.follow_links, None);
+        assert_eq!(config.tree_only, None);
+        assert_eq!(config.human, None);
+    }
+}
