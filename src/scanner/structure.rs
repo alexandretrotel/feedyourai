@@ -35,7 +35,7 @@ struct Node {
 ///
 /// Returns a single-line "The directory is empty." body if the root has no
 /// entries at all (before filtering).
-pub fn get_directory_tree(config: &Config, ignored_dirs: &[&str]) -> io::Result<String> {
+pub fn get_directory_tree(config: &Config) -> io::Result<String> {
     let root = &config.directory;
     let mut structure = String::new();
     structure.push_str("- Tree Structure\n\n");
@@ -45,8 +45,8 @@ pub fn get_directory_tree(config: &Config, ignored_dirs: &[&str]) -> io::Result<
         return Ok(structure);
     }
 
-    let filter = PathFilter::new(config, ignored_dirs);
-    let walker = build_walker(config, ignored_dirs)?;
+    let filter = PathFilter::new(config);
+    let walker = build_walker(config)?;
     let entries = collect_entries(&filter, walker)?;
 
     let root_label = root

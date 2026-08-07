@@ -1,8 +1,9 @@
 //! Configuration types (CLI-agnostic) and config-file discovery/merging.
 //!
-//! [`Config`] is what the scanning/combining logic actually runs on.
+//! [`Config`](crate::config::Config) is what the scanning/combining logic
+//! actually runs on.
 //! [`PartialConfig`](crate::config::PartialConfig) is its optional,
-//! partially-specified counterpart: one instance loaded from a `fyai.yaml`
+//! partially-specified counterpart: one instance loaded from a `fyai.toml`
 //! file, another built from CLI flags (`None` for anything not explicitly
 //! passed, so an unset CLI flag can't shadow a config-file value).
 //! [`merge_config`](crate::config::merge_config) reconciles the two, CLI
@@ -23,7 +24,7 @@ pub struct Config {
     pub output: PathBuf,
     /// If set, only directories whose name matches one of these are walked.
     pub include_dirs: Option<Vec<String>>,
-    /// Directory names to skip, in addition to [`crate::constants::IGNORED_DIRS`].
+    /// Directory names to skip.
     pub exclude_dirs: Option<Vec<String>>,
     /// If set, only files with one of these extensions are included.
     pub include_ext: Option<Vec<String>>,
@@ -46,7 +47,7 @@ pub struct Config {
     pub human: bool,
 }
 
-/// Partially-specified configuration, either loaded from a `fyai.yaml` file
+/// Partially-specified configuration, either loaded from a `fyai.toml` file
 /// or built from CLI flags. Every field is optional; unset fields fall back
 /// to the other source, then to a built-in default, when merged via
 /// [`merge_config`].
@@ -81,12 +82,12 @@ pub struct PartialConfig {
 }
 
 impl PartialConfig {
-    /// Reads and parses a `fyai.yaml`-style config file from `path`.
+    /// Reads and parses a `fyai.toml`-style config file from `path`.
     ///
     /// # Errors
     ///
     /// Returns [`FyaiError::ReadConfig`] if the file can't be read, or
-    /// [`FyaiError::ParseConfig`] if its contents aren't valid YAML for this
+    /// [`FyaiError::ParseConfig`] if its contents aren't valid TOML for this
     /// type.
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self> {
         let path = path.as_ref();
@@ -95,7 +96,7 @@ impl PartialConfig {
             source,
         })?;
         let config: PartialConfig =
-            yaml_serde::from_str(&content).map_err(|source| FyaiError::ParseConfig {
+            toml::from_str(&content).map_err(|source| FyaiError::ParseConfig {
                 path: path.to_path_buf(),
                 source,
             })?;
@@ -103,17 +104,17 @@ impl PartialConfig {
     }
 }
 
-/// Looks for a config file, preferring a local `./fyai.yaml` over the
+/// Looks for a config file, preferring a local `./fyai.toml` over the
 /// system-wide one returned by [`system_config_dir`].
 ///
 /// Returns `None` if neither exists.
 pub fn discover_config_file() -> Option<PathBuf> {
-    let local = PathBuf::from("./fyai.yaml");
+    let local = PathBuf::from("./fyai.toml");
     if local.exists() {
         return Some(local);
     }
     if let Some(config_dir) = system_config_dir() {
-        let global = config_dir.join("fyai.yaml");
+        let global = config_dir.join("fyai.toml");
         if global.exists() {
             return Some(global);
         }
@@ -121,7 +122,7 @@ pub fn discover_config_file() -> Option<PathBuf> {
     None
 }
 
-/// Returns the platform's config directory, where the global `fyai.yaml`
+/// Returns the platform's config directory, where the global `fyai.toml`
 /// lives: `$XDG_CONFIG_HOME` if set to an absolute path (honored on every
 /// platform, not just Linux, matching the XDG Base Directory spec), else
 /// the platform default (e.g. `~/.config` on Linux, `~/Library/Application

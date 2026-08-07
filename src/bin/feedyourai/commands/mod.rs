@@ -7,7 +7,7 @@ use clap::{ArgAction, Parser, Subcommand, parser::ValueSource};
 use color_eyre::eyre::{Result, eyre};
 use feedyourai::config::PartialConfig;
 
-/// The `init` subcommand: writes a starter `fyai.yaml`.
+/// The `init` subcommand: writes a starter `fyai.toml`.
 pub mod init;
 
 /// Top-level command-line arguments.
@@ -15,7 +15,7 @@ pub mod init;
 #[command(
     name = "fyai",
     version = env!("CARGO_PKG_VERSION"),
-    about = "A tool to combine text files for LLM processing with flexible filtering options.\n\nCONFIG FILE SUPPORT:\n  - You can specify options in a config file (YAML format).\n  - Local config: ./fyai.yaml (used if present in current directory)\n  - Global config: system config directory (used if no local config found).\n    Honors $XDG_CONFIG_HOME (any platform, if set to an absolute path),\n    else the platform default. Run `fyai init --global` to see the exact path.\n  - CLI options override config file values.\n  - See README for details and examples."
+    about = "A tool to combine text files for LLM processing with flexible filtering options.\n\nCONFIG FILE SUPPORT:\n  - You can specify options in a config file (TOML format).\n  - Local config: ./fyai.toml (used if present in current directory)\n  - Global config: system config directory (used if no local config found).\n    Honors $XDG_CONFIG_HOME (any platform, if set to an absolute path),\n    else the platform default. Run `fyai init --global` to see the exact path.\n  - CLI options override config file values.\n  - You can also drop a .fyaiignore file (gitignore syntax) to exclude paths.\n  - See README for details and examples."
 )]
 pub struct Cli {
     /// Sets the input directory.
@@ -132,12 +132,12 @@ pub struct Cli {
     )]
     pub max_size: Option<u64>,
 
-    /// Sets whether to respect ignore files (gitignore, .ignore, etc.)
-    /// \[default: true\].
+    /// Sets whether to respect .gitignore/.ignore and friends \[default:
+    /// true\]. `.fyaiignore` is always respected regardless of this flag.
     #[arg(
         long = "no-gitignore",
         action = ArgAction::SetTrue,
-        help = "Sets whether to respect ignore files (gitignore, .ignore, etc.) [default: true]"
+        help = "Sets whether to respect .gitignore/.ignore and friends [default: true] (.fyaiignore is always respected)"
     )]
     pub no_gitignore: bool,
 
@@ -162,7 +162,7 @@ pub struct Cli {
 /// Subcommands available alongside the default combine behavior.
 #[derive(Subcommand, Debug)]
 pub enum Command {
-    /// Writes a starter `fyai.yaml` config file.
+    /// Writes a starter `fyai.toml` config file.
     Init {
         /// Generates the config in the system config directory instead of
         /// the current directory.
@@ -181,7 +181,7 @@ pub enum Command {
 
 /// Converts parsed `clap` matches into a [`PartialConfig`], leaving a field
 /// `None` unless it was explicitly set on the command line — so an unset
-/// flag can't shadow a `fyai.yaml` value when [`merge_config`] reconciles
+/// flag can't shadow a `fyai.toml` value when [`merge_config`] reconciles
 /// the two.
 ///
 /// [`merge_config`]: feedyourai::config::merge_config

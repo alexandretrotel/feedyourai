@@ -14,7 +14,7 @@ mod clipboard;
 mod commands;
 
 /// Runs the CLI end to end: parses arguments, resolves configuration
-/// (merging any `fyai.yaml` with CLI flags), runs the combine, and reports
+/// (merging any `fyai.toml` with CLI flags), runs the combine, and reports
 /// the result to stdout/stderr, including a best-effort clipboard copy.
 pub(crate) fn run() -> Result<()> {
     color_eyre::install()?;

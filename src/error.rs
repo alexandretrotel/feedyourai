@@ -21,14 +21,14 @@ pub enum FyaiError {
         source: io::Error,
     },
 
-    /// The config file at `path` was read but is not valid YAML for
+    /// The config file at `path` was read but is not valid TOML for
     /// [`crate::config::PartialConfig`].
-    #[error("YAML parse error in {path}: {source}")]
+    #[error("TOML parse error in {path}: {source}")]
     ParseConfig {
         /// Path of the config file that failed to parse.
         path: PathBuf,
-        /// Underlying YAML parse error.
-        source: yaml_serde::Error,
+        /// Underlying TOML parse error.
+        source: toml::de::Error,
     },
 
     /// Spawning `git`, or the `git` command itself, failed.

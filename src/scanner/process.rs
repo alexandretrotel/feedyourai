@@ -20,16 +20,12 @@ use super::walker::build_walker;
 /// filtered by the path filter and size bounds before being appended as a
 /// `### path (size)` heading followed by a language-tagged, fenced code
 /// block (see `write_file_block`).
-pub fn process_files(
-    config: &Config,
-    dir_structure: &str,
-    ignored_dirs: &[&str],
-) -> io::Result<()> {
+pub fn process_files(config: &Config, dir_structure: &str) -> io::Result<()> {
     let mut output = File::create(&config.output)?;
     write!(output, "{}", dir_structure)?;
 
-    let filter = PathFilter::new(config, ignored_dirs);
-    let walker = build_walker(config, ignored_dirs)?;
+    let filter = PathFilter::new(config);
+    let walker = build_walker(config)?;
     for entry in walker {
         let entry = entry.map_err(io::Error::other)?;
         let path = entry.path();

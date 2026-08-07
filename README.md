@@ -8,13 +8,14 @@ A command-line tool to combine files from a directory into a single file for LLM
 
 - Combines multiple text files into one output file
 - Can process a remote git repository in a temporary directory
-- Supports configuration via CLI options and config files (YAML)
+- Supports configuration via CLI options and config files (TOML)
 - Filters files by:
   - Size
   - File extensions (e.g., `.txt`, `.md`)
   - Directory inclusion/exclusion
   - File inclusion/exclusion
-  - Optionally respects `.gitignore` rules (can be disabled)
+  - Optionally respects `.gitignore`/`.ignore` rules (can be disabled with `--no-gitignore`)
+  - Always respects a `.fyaiignore` file (gitignore syntax), regardless of `--no-gitignore`
 - Preserves file boundaries with headers showing filename and size
 - Customizable input directory and output file
 
@@ -40,9 +41,9 @@ Run `fyai` in your terminal to combine files:
 
 ### Config File Support
 
-You can specify options in a config file (YAML format):
+You can specify options in a config file (TOML format):
 
-- **Local config:** `./fyai.yaml` (used if present in current directory)
+- **Local config:** `./fyai.toml` (used if present in current directory)
 - **Global config:** System config directory, used if no local config found — `$XDG_CONFIG_HOME` if set to an absolute path (any platform), otherwise the platform default (e.g. `~/.config` on Linux, `~/Library/Application Support` on macOS)
 - **Precedence:** Local config overrides global config. CLI options override both config files.
 
@@ -52,25 +53,25 @@ To see the exact global config path on your system, run:
 fyai init --global
 ```
 
-#### Example `fyai.yaml`
+#### Example `fyai.toml`
 
-```yaml
-directory: ./src
-output: combined.txt
-include_ext:
-  - md
-  - txt
-exclude_dirs:
-  - node_modules
-  - dist
-min_size: 10240
-max_size: 512000
-respect_gitignore: true
-tree_only: false
-human: false
+```toml
+directory = "./src"
+output = "combined.txt"
+include_ext = ["md", "txt"]
+exclude_dirs = ["node_modules", "dist"]
+min_size = 10240
+max_size = 512000
+respect_gitignore = true
+tree_only = false
+human = false
 ```
 
 All CLI options can be set in the config file. CLI flags always take precedence.
+
+### Path Exclusion via `.fyaiignore`
+
+Drop a `.fyaiignore` file (gitignore syntax) anywhere under the scanned directory to exclude matching paths, as an alternative or complement to `exclude_dirs`/`exclude_files`. Unlike `.gitignore`, it's always respected — `--no-gitignore`/`respect_gitignore: false` has no effect on it, since it's fyai's own dedicated exclude mechanism rather than a git one.
 
 ### Basic Usage
 
@@ -167,7 +168,7 @@ src/
     helper.rs
 ```
 
-Pass `--human` (or `human: true` in `fyai.yaml`) for `tree`-style connector glyphs instead:
+Pass `--human` (or `human = true` in `fyai.toml`) for `tree`-style connector glyphs instead:
 
 ```
 - Tree Structure

@@ -13,21 +13,18 @@ use crate::config::Config;
 /// Built once per run and reused for every entry the walker yields.
 pub struct PathFilter<'a> {
     config: &'a Config,
-    ignored_dirs: &'a [&'a str],
     canonical_output_path: Option<PathBuf>,
     normalized_filters: NormalizedFilterConfig,
 }
 
 impl<'a> PathFilter<'a> {
-    /// Creates a filter for `config`, additionally rejecting any component
-    /// matching `ignored_dirs`.
-    pub fn new(config: &'a Config, ignored_dirs: &'a [&'a str]) -> Self {
+    /// Creates a filter for `config`.
+    pub fn new(config: &'a Config) -> Self {
         let canonical_output_path = fs::canonicalize(&config.output).ok();
         let normalized_filters = NormalizedFilterConfig::new(config);
 
         Self {
             config,
-            ignored_dirs,
             canonical_output_path,
             normalized_filters,
         }
@@ -77,9 +74,6 @@ impl<'a> PathFilter<'a> {
     }
 
     fn matches_ignored_dir(&self, path: &Path) -> bool {
-        if any_component_matches_list(path, self.ignored_dirs) {
-            return true;
-        }
         match &self.normalized_filters.exclude_dirs {
             Some(excludes) => any_component_in_set(path, excludes),
             None => false,
@@ -173,22 +167,6 @@ fn any_component_in_set(path: &Path, set: &HashSet<String>) -> bool {
             .as_os_str()
             .to_str()
             .map(|name| set.contains(&name.to_lowercase()))
-            .unwrap_or(false)
-    })
-}
-
-/// Returns true if any path component of `path` case-insensitively matches
-/// an entry of `list`.
-fn any_component_matches_list(path: &Path, list: &[&str]) -> bool {
-    path.components().any(|component| {
-        component
-            .as_os_str()
-            .to_str()
-            .map(|name| {
-                let name_lower = name.to_lowercase();
-                list.iter()
-                    .any(|ignored| ignored.eq_ignore_ascii_case(&name_lower))
-            })
             .unwrap_or(false)
     })
 }
