@@ -9,20 +9,23 @@ Added
 - `error` module with a `FyaiError` type (via `thiserror`), replacing `color-eyre` in the library crate.
 - `--human` flag (and `human` config-file key) to render the directory tree with `tree`-style connector glyphs (`├──`, `└──`, `│`) instead of the default minimal two-space indent.
 - `system_config_dir` now honors `$XDG_CONFIG_HOME` (when set to an absolute path) on every platform, not just Linux, before falling back to the platform default.
+- `.fyaiignore` support: a gitignore-syntax file, honored in any directory it appears in, for path-based exclusion as an alternative to `exclude_dirs`/`exclude_files`. Unlike `.gitignore`/`.ignore`, it's *always* respected, even with `--no-gitignore`.
 
 Changed
 - **Breaking:** CLI wiring (`cli`, `init`, clipboard) moved out of the library into the `fyai`/`feedyourai` binaries; the library no longer prints to stdout/stderr or copies to the clipboard, and no longer depends on `color-eyre`.
-- Replaced `serde_yaml` (archived) with `yaml_serde`.
+- **Breaking:** Config file format switched from YAML to TOML: `fyai.yaml` → `fyai.toml`, `serde_yaml`/`yaml_serde` dependency replaced with `toml`.
 - Replaced `directories-next` with `dirs` for locating system config directories.
 - `documentation` field in `Cargo.toml` now points to `docs.rs` instead of the GitHub repo.
 - README demo GIF now uses a raw GitHub link so it renders on crates.io.
 - CI split into `ci.yml` (fmt, clippy, machete, test), `build-binaries.yml`, and `release.yml`, each triggered on `push` to `main` in addition to pull requests.
 - `release.yml` now uploads both `fyai` and `feedyourai` binaries per target.
-- `IGNORED_DIRS` trimmed to committed config/VCS directories only (`.github`, `.vscode`, `.git`, etc., grouped and doc-commented with a note to re-sync against github/gitignore's `Global/` templates); build/dependency/cache directories (`node_modules`, `target`, `.venv`, ...) are no longer hardcoded and now rely on `.gitignore` via `respect_gitignore`.
-- `get_directory_structure` now dispatches between two renderers based on `config.human`: a minimal two-space indent by default, or `tree`-style ASCII connectors when set.
+- `get_directory_tree` now dispatches between two renderers based on `config.human`: a minimal two-space indent by default, or `tree`-style ASCII connectors when set.
 - **Breaking:** Per-file output format changed from `- File: name (size bytes)` + raw content to a `### relative/path (human size)` heading followed by a language-tagged, fenced code block (language inferred from extension via the new `scanner::lang` module). The fence widens from ```` ``` ```` to ```` ```` ```` when the file's own content contains a triple backtick, so the block's end is never ambiguous — the old format had no closing delimiter at all.
 - **Breaking:** `merge_config` now takes two `PartialConfig`s (`file`, `cli`) instead of a `PartialConfig` plus a fully-resolved `Config` and a separate `ExplicitFlags`. CLI parsing (`config_from_matches`) now returns a `PartialConfig` directly, leaving a field `None` unless it was explicitly passed, instead of always resolving to a concrete value and tracking "was this explicit" on the side.
+- **Breaking:** `get_directory_tree`/`process_files`/`build_walker`/`PathFilter::new` no longer take an `ignored_dirs` parameter, since there's no longer a hardcoded default-ignore list — see Removed.
 - Wording: replaced "AI" with "LLM" throughout descriptions and doc comments (binary names `feedyourai`/`fyai` unchanged).
+- `fyai`/`feedyourai`'s CLI module moved from `cli.rs` + `cli/init.rs` to `commands/mod.rs` + `commands/init.rs` (the directory-only module layout).
+- Library restructuring: `src/commands.rs` renamed to `src/runner.rs` (its `run` function renamed `run_local`); `src/git.rs` merged into it (`run` renamed `run_git`), so both entry points live in one module instead of two files that each exported a function ambiguously named `run`. `lib.rs` now just re-exports `runner::{run_local, run_git}` instead of wrapping them.
 
 Fixed
 - `--repo`'s `conflicts_with` referenced a nonexistent `directory` arg id (the actual id is `input`), which made every CLI invocation panic at startup.
@@ -30,7 +33,7 @@ Fixed
 - CLI `--help` and `init --global`'s help text hardcoded `~/.config/fyai.yaml` as the global config path, which is wrong on macOS/Windows and ignores `$XDG_CONFIG_HOME`. Now describes the actual resolution and points to `fyai init --global` for the exact path.
 
 Removed
-- `IGNORED_FILES` constant and the hardcoded lockfile skip list. Use `exclude_files` to skip specific file names.
+- `IGNORED_FILES` and `IGNORED_DIRS` constants (and the `constants` module entirely) — no more hardcoded default-ignore list. Exclusion is now fully explicit via `exclude_dirs`, `exclude_files`, `.gitignore`/`.ignore`, or the new `.fyaiignore`.
 - `ExplicitFlags` struct — superseded by `PartialConfig`-based CLI parsing (see Changed).
 
 Added (crate metadata)
