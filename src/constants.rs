@@ -10,6 +10,9 @@ const RAW_IGNORED_DIRS: &str = include_str!("default_ignore_dirs.txt");
 /// VCS and editor/tool config directories skipped regardless of
 /// `.gitignore` state, parsed from `RAW_IGNORED_DIRS` (`#`-comments and
 /// blank lines dropped).
+///
+/// Full bundled list, `default_ignore_dirs.txt`:
+#[doc = concat!("```text\n", include_str!("default_ignore_dirs.txt"), "```")]
 pub static IGNORED_DIRS: LazyLock<Vec<&'static str>> = LazyLock::new(|| {
     RAW_IGNORED_DIRS
         .lines()

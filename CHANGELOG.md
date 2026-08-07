@@ -9,6 +9,7 @@ Added
 - `error` module with a `FyaiError` type (via `thiserror`), replacing `color-eyre` in the library crate.
 - `--human` flag (and `human` config-file key) to render the directory tree with `tree`-style connector glyphs (`├──`, `└──`, `│`) instead of the default minimal two-space indent.
 - `system_config_dir` now honors `$XDG_CONFIG_HOME` (when set to an absolute path) on every platform, not just Linux, before falling back to the platform default.
+- `IGNORED_DIRS`'s rustdoc now embeds the full contents of `default_ignore_dirs.txt` in a fenced code block, so the list is visible directly on docs.rs.
 
 Changed
 - **Breaking:** CLI wiring (`cli`, `init`, clipboard) moved out of the library into the `fyai`/`feedyourai` binaries; the library no longer prints to stdout/stderr or copies to the clipboard, and no longer depends on `color-eyre`.
