@@ -18,6 +18,9 @@ Changed
 - `release.yml` now uploads both `fyai` and `feedyourai` binaries per target.
 - `IGNORED_DIRS` trimmed to committed config/VCS directories only (`.github`, `.vscode`, `.git`, etc.); build/dependency/cache directories (`node_modules`, `target`, `.venv`, ...) are no longer hardcoded and now rely on `.gitignore` via `respect_gitignore`.
 
+Removed
+- `IGNORED_FILES` constant and the hardcoded lockfile skip list. Use `exclude_files` to skip specific file names.
+
 Added (crate metadata)
 - `keywords`, `categories`, and `readme` fields for crates.io discoverability.
 
