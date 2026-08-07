@@ -1,3 +1,5 @@
+//! Renders the filtered directory tree as an indented text listing.
+
 use std::fmt::Write;
 use std::io;
 use std::path::Path;
@@ -7,9 +9,13 @@ use crate::config::Config;
 use super::filter::PathFilter;
 use super::walker::build_walker;
 
+/// Walks `root` and renders every entry that passes the configured filters
+/// as an indented tree, prefixed with a `- Tree Structure` header.
+///
+/// Returns a single-line "The directory is empty." body if `root` has no
+/// entries at all (before filtering).
 pub fn get_directory_structure(
     root: &Path,
-    ignored_files: &[&str],
     ignored_dirs: &[&str],
     config: &Config,
 ) -> io::Result<String> {
@@ -22,13 +28,15 @@ pub fn get_directory_structure(
     }
 
     let filter = PathFilter::new(config, ignored_dirs);
-    let walker = build_walker(root, ignored_files, ignored_dirs, config)?;
+    let walker = build_walker(root, ignored_dirs, config)?;
     write_directory_structure(&mut structure, &filter, walker)?;
 
     structure.push('\n');
     Ok(structure)
 }
 
+/// Appends one indented line per filtered walk entry to `output`, indenting
+/// by the entry's depth and suffixing directories with `/`.
 fn write_directory_structure(
     output: &mut String,
     filter: &PathFilter<'_>,
