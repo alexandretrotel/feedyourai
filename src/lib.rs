@@ -1,7 +1,7 @@
 //! Core library for `feedyourai`: walks a directory (or a temporary clone of
 //! a git repository), filters files according to a [`config::Config`], and
 //! combines the matching files into a single text file for feeding into an
-//! AI tool.
+//! LLM.
 //!
 //! This crate is intentionally silent and side-effect-free beyond writing
 //! the requested output file: it never prints to stdout/stderr and never

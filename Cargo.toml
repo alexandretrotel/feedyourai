@@ -2,7 +2,7 @@
 name = "feedyourai"
 version = "3.0.0"
 edition = "2024"
-description = "A tool to combine text files for AI processing with flexible filtering options."
+description = "A tool to combine text files for LLM processing with flexible filtering options."
 authors = ["Alexandre Trotel"]
 homepage = "https://github.com/alexandretrotel/feedyourai"
 repository = "https://github.com/alexandretrotel/feedyourai"

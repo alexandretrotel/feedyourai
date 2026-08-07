@@ -1,6 +1,6 @@
 # feedyourai
 
-A command-line tool to combine files from a directory into a single file for AI processing, with flexible filtering options.
+A command-line tool to combine files from a directory into a single file for LLM processing, with flexible filtering options.
 
 ![Demo: fyai combining files in a terminal](https://raw.githubusercontent.com/alexandretrotel/feedyourai/main/assets/fyai.gif)
 

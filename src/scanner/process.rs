@@ -16,7 +16,7 @@ use super::walker::build_walker;
 /// under `config.directory` to `config.output`.
 ///
 /// Files that fail UTF-8 decoding are silently skipped (binary files aren't
-/// meaningful to include in an AI-facing text dump); everything else is
+/// meaningful to include in an LLM-facing text dump); everything else is
 /// filtered by the path filter and size bounds before being appended as a
 /// `### path (size)` heading followed by a language-tagged, fenced code
 /// block (see `write_file_block`).
