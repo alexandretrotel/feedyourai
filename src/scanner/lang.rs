@@ -1,0 +1,52 @@
+//! Maps a file extension to the language identifier used on its Markdown
+//! code fence.
+
+/// Returns the fence language tag for `ext` (lower-cased, no leading dot),
+/// or `""` if the extension isn't recognized (a plain, untagged fence is
+/// still valid Markdown).
+pub(crate) fn fence_language(ext: &str) -> &'static str {
+    match ext {
+        "rs" => "rust",
+        "py" | "pyw" => "python",
+        "js" | "mjs" | "cjs" => "javascript",
+        "jsx" => "jsx",
+        "ts" | "mts" | "cts" => "typescript",
+        "tsx" => "tsx",
+        "go" => "go",
+        "java" => "java",
+        "kt" | "kts" => "kotlin",
+        "c" | "h" => "c",
+        "cpp" | "cc" | "cxx" | "hpp" | "hxx" => "cpp",
+        "cs" => "csharp",
+        "rb" => "ruby",
+        "php" => "php",
+        "sh" | "bash" | "zsh" => "bash",
+        "ps1" => "powershell",
+        "yaml" | "yml" => "yaml",
+        "json" | "jsonc" => "json",
+        "toml" => "toml",
+        "xml" => "xml",
+        "md" | "markdown" => "markdown",
+        "html" | "htm" => "html",
+        "css" => "css",
+        "scss" | "sass" => "scss",
+        "sql" => "sql",
+        "swift" => "swift",
+        "dart" => "dart",
+        "lua" => "lua",
+        "r" => "r",
+        "pl" | "pm" => "perl",
+        "ex" | "exs" => "elixir",
+        "erl" => "erlang",
+        "hs" => "haskell",
+        "scala" => "scala",
+        "zig" => "zig",
+        "dockerfile" => "dockerfile",
+        "makefile" | "mk" => "makefile",
+        "graphql" | "gql" => "graphql",
+        "proto" => "protobuf",
+        "vue" => "vue",
+        "svelte" => "svelte",
+        _ => "",
+    }
+}

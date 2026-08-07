@@ -1,6 +1,7 @@
 //! Directory walking, filtering, and file-combining logic.
 
 mod filter;
+mod lang;
 mod process;
 mod structure;
 mod utils;
