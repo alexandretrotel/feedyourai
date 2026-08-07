@@ -3,7 +3,6 @@
 //! contents. Also handles cloning a remote git repository into a temporary
 //! directory before running the same combine logic against it.
 
-use std::fs;
 use std::path::PathBuf;
 use std::process::{self, Command};
 
@@ -11,21 +10,14 @@ use tempfile::TempDir;
 
 use crate::config::Config;
 use crate::error::{FyaiError, Result};
-use crate::scanner::{get_directory_tree, process_files};
+use crate::scanner::scan;
 
 /// Combines files from a local directory as described by `config`.
 ///
 /// Writes the result to `config.output` (either the directory tree only, or
 /// the tree plus file contents, depending on `config.tree_only`).
 pub fn run_local(config: Config) -> Result<()> {
-    let dir_structure = get_directory_tree(&config)?;
-
-    if config.tree_only {
-        fs::write(&config.output, &dir_structure)?;
-    } else {
-        process_files(&config, &dir_structure)?;
-    }
-
+    scan(&config)?;
     Ok(())
 }
 
