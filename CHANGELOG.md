@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Added
 - `fyai` as a second binary target, aliasing `feedyourai` (same CLI, no behavior difference).
 - `error` module with a `FyaiError` type (via `thiserror`), replacing `color-eyre` in the library crate.
+- `--human` flag (and `human` config-file key) to render the directory tree with `tree`-style connector glyphs (`├──`, `└──`, `│`) instead of the default minimal two-space indent.
 
 Changed
 - **Breaking:** CLI wiring (`cli`, `init`, clipboard) moved out of the library into the `fyai`/`feedyourai` binaries; the library no longer prints to stdout/stderr or copies to the clipboard, and no longer depends on `color-eyre`.
@@ -18,7 +19,7 @@ Changed
 - `release.yml` now uploads both `fyai` and `feedyourai` binaries per target.
 - `IGNORED_DIRS` trimmed to committed config/VCS directories only (`.github`, `.vscode`, `.git`, etc.); build/dependency/cache directories (`node_modules`, `target`, `.venv`, ...) are no longer hardcoded and now rely on `.gitignore` via `respect_gitignore`.
 - `IGNORED_DIRS` now parsed from a bundled `src/default_ignore_dirs.txt` ignore-list instead of a Rust array, seeded from github/gitignore's `Global/` editor/IDE templates plus VCS internals and common CI tooling.
-- Directory tree output now uses `tree`-style ASCII connectors (`├──`, `└──`, `│`) instead of plain two-space indentation.
+- `get_directory_structure` now dispatches between two renderers based on `config.human`: a minimal two-space indent by default, or `tree`-style ASCII connectors when set.
 
 Removed
 - `IGNORED_FILES` constant and the hardcoded lockfile skip list. Use `exclude_files` to skip specific file names.

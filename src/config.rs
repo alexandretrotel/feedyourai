@@ -39,6 +39,9 @@ pub struct Config {
     pub respect_gitignore: bool,
     /// If true, only the directory tree is written; file contents are skipped.
     pub tree_only: bool,
+    /// If true, renders the directory tree with `tree`-style connector
+    /// glyphs (`├──`, `└──`, `│`) instead of the minimal two-space indent.
+    pub human: bool,
 }
 
 /// Partially-specified configuration as loaded from a `fyai.yaml` file.
@@ -71,6 +74,8 @@ pub struct FileConfig {
     pub respect_gitignore: Option<bool>,
     /// See [`Config::tree_only`].
     pub tree_only: Option<bool>,
+    /// See [`Config::human`].
+    pub human: Option<bool>,
 }
 
 impl FileConfig {
@@ -133,6 +138,8 @@ pub struct ExplicitFlags {
     pub respect_gitignore: bool,
     /// Whether `--tree-only` was passed explicitly.
     pub tree_only: bool,
+    /// Whether `--human` was passed explicitly.
+    pub human: bool,
 }
 
 /// Merges a [`FileConfig`] with CLI-supplied values into a final [`Config`].
@@ -166,6 +173,12 @@ pub fn merge_config(file: FileConfig, cli: Config, explicit: ExplicitFlags) -> C
         file.tree_only.unwrap_or(cli.tree_only)
     };
 
+    let human = if explicit.human {
+        cli.human
+    } else {
+        file.human.unwrap_or(cli.human)
+    };
+
     Config {
         directory,
         output,
@@ -179,5 +192,6 @@ pub fn merge_config(file: FileConfig, cli: Config, explicit: ExplicitFlags) -> C
         max_size: cli.max_size.or(file.max_size),
         respect_gitignore,
         tree_only,
+        human,
     }
 }

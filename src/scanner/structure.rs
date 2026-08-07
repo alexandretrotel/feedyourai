@@ -1,5 +1,6 @@
-//! Renders the filtered directory tree as an ASCII-glyph listing (the same
-//! connector style as the Unix `tree` command).
+//! Renders the filtered directory tree, either as a minimal indented list
+//! (the default) or as a `tree`-style connector diagram when
+//! `config.human` is set.
 
 use std::fmt::Write;
 use std::io;
@@ -16,7 +17,9 @@ struct FlatEntry {
     is_dir: bool,
 }
 
-/// A directory tree node, built from a [`FlatEntry`] list.
+/// A directory tree node, built from a [`FlatEntry`] list. Only needed for
+/// the connector-style ([`render_glyph_tree`]) renderer, which has to know
+/// each node's siblings to draw `├──` vs `└──`.
 struct Node {
     name: String,
     is_dir: bool,
@@ -24,8 +27,11 @@ struct Node {
 }
 
 /// Walks `config.directory` and renders every entry that passes the
-/// configured filters as a `tree`-style connector diagram, prefixed with a
-/// `- Tree Structure` header.
+/// configured filters as a tree, prefixed with a `- Tree Structure` header.
+///
+/// Uses connector-style glyphs (`├──`, `└──`, `│`) when `config.human` is
+/// set, or a minimal two-space indent otherwise (the default: fewer bytes,
+/// just as easy for an LLM to parse from depth alone).
 ///
 /// Returns a single-line "The directory is empty." body if the root has no
 /// entries at all (before filtering).
@@ -42,15 +48,20 @@ pub fn get_directory_structure(config: &Config, ignored_dirs: &[&str]) -> io::Re
     let filter = PathFilter::new(config, ignored_dirs);
     let walker = build_walker(config, ignored_dirs)?;
     let entries = collect_entries(&filter, walker)?;
-    let roots = build_tree(entries);
 
     let root_label = root
         .file_name()
         .and_then(|name| name.to_str())
         .filter(|name| !name.is_empty())
         .unwrap_or(".");
-    writeln!(structure, "{root_label}").map_err(io::Error::other)?;
-    render_tree(&roots, "", &mut structure).map_err(io::Error::other)?;
+
+    if config.human {
+        writeln!(structure, "{root_label}").map_err(io::Error::other)?;
+        render_glyph_tree(&build_tree(entries), "", &mut structure).map_err(io::Error::other)?;
+    } else {
+        writeln!(structure, "{root_label}/").map_err(io::Error::other)?;
+        render_indent_tree(&entries, &mut structure).map_err(io::Error::other)?;
+    }
 
     structure.push('\n');
     Ok(structure)
@@ -89,6 +100,17 @@ fn collect_entries(filter: &PathFilter<'_>, walker: ignore::Walk) -> io::Result<
     }
 
     Ok(entries)
+}
+
+/// Appends `entries` to `output` as a minimal two-space-per-depth indented
+/// list, suffixing directories with `/`.
+fn render_indent_tree(entries: &[FlatEntry], output: &mut String) -> std::fmt::Result {
+    for entry in entries {
+        let indent = "  ".repeat(entry.depth);
+        let marker = if entry.is_dir { "/" } else { "" };
+        writeln!(output, "{indent}{}{marker}", entry.name)?;
+    }
+    Ok(())
 }
 
 /// Rebuilds the tree structure implied by `entries`' depths (a preorder
@@ -130,7 +152,7 @@ fn build_children(
 
 /// Appends `nodes` to `output` using `tree`-style connectors (`├── `,
 /// `└── `, `│   `), recursing into directories with an extended prefix.
-fn render_tree(nodes: &[Node], prefix: &str, output: &mut String) -> std::fmt::Result {
+fn render_glyph_tree(nodes: &[Node], prefix: &str, output: &mut String) -> std::fmt::Result {
     for (index, node) in nodes.iter().enumerate() {
         let is_last = index == nodes.len() - 1;
         let connector = if is_last { "└── " } else { "├── " };
@@ -139,7 +161,7 @@ fn render_tree(nodes: &[Node], prefix: &str, output: &mut String) -> std::fmt::R
 
         if !node.children.is_empty() {
             let child_prefix = format!("{prefix}{}", if is_last { "    " } else { "│   " });
-            render_tree(&node.children, &child_prefix, output)?;
+            render_glyph_tree(&node.children, &child_prefix, output)?;
         }
     }
 

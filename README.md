@@ -67,6 +67,7 @@ min_size: 10240
 max_size: 512000
 respect_gitignore: true
 tree_only: false
+human: false
 ```
 
 All CLI options can be set in the config file. CLI flags always take precedence.
@@ -124,6 +125,12 @@ fyai --help # show help
   fyai --tree-only -o tree.txt
   ```
 
+- Render the directory tree with `tree`-style connector glyphs instead of the default minimal indent:
+
+  ```bash
+  fyai --tree-only --human -o tree.txt
+  ```
+
 - Ignore .gitignore rules and include all files (even those normally excluded):
   ```bash
   fyai --respect-gitignore false
@@ -148,6 +155,28 @@ fyai --help # show help
   ```
 
 ## Output Format
+
+Every run starts with a `- Tree Structure` section. By default it uses a minimal two-space indent:
+
+```
+- Tree Structure
+
+src/
+  main.rs
+  utils/
+    helper.rs
+```
+
+Pass `--human` (or `human: true` in `fyai.yaml`) for `tree`-style connector glyphs instead:
+
+```
+- Tree Structure
+
+src
+├── main.rs
+└── utils/
+    └── helper.rs
+```
 
 The combined file includes headers for each source file:
 
