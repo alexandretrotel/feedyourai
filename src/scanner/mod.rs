@@ -12,7 +12,7 @@ mod filter;
 mod lang;
 mod process;
 mod scan;
-mod structure;
+mod tree;
 mod utils;
 mod walker;
 
